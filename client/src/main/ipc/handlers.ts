@@ -6,8 +6,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as zlib from 'zlib'
 import { promisify } from 'util'
-import * as tar from 'tar'
-import { pipeline } from 'stream/promises'
+import { execSync } from 'child_process'
+import * as os from 'os'
 
 const gzip = promisify(zlib.gzip)
 
@@ -475,69 +475,45 @@ export function setupIpcHandlers() {
   ipcMain.handle('fs:packDirectory', async (_, dirPath: string, options?: { ignore?: string[] }) => {
     const ignore = options?.ignore || ['node_modules', '.git', '__pycache__', '.venv', 'venv', '.next', '.nuxt', 'target', 'vendor', 'dist', 'build']
     
-    // 收集所有要打包的文件（相对路径）
-    const filesToPack: string[] = []
+    // 创建临时文件
+    const tempDir = os.tmpdir()
+    const tarFile = path.join(tempDir, `upload_${Date.now()}.tar.gz`)
     
-    function scanFiles(currentPath: string, relativePath: string = '') {
-      const entries = fs.readdirSync(currentPath, { withFileTypes: true })
-      for (const entry of entries) {
-        if (ignore.includes(entry.name)) continue
-        
-        const fullPath = path.join(currentPath, entry.name)
-        const relPath = relativePath ? path.join(relativePath, entry.name) : entry.name
-        
-        if (entry.isDirectory()) {
-          scanFiles(fullPath, relPath)
-        } else {
-          filesToPack.push(relPath)
+    try {
+      // 构建排除参数
+      const excludeArgs = ignore.map(i => `--exclude="${i}"`).join(' ')
+      
+      // 使用系统 tar 命令打包
+      // Windows 10+ 自带 tar，Linux/Mac 也有
+      const isWindows = process.platform === 'win32'
+      
+      if (isWindows) {
+        // Windows: 使用 tar 命令
+        const cmd = `tar -czf "${tarFile}" ${excludeArgs} -C "${dirPath}" .`
+        console.log('[packDirectory] Running:', cmd)
+        execSync(cmd, { stdio: 'pipe', windowsHide: true })
+      } else {
+        // Linux/Mac
+        const cmd = `tar -czf "${tarFile}" ${excludeArgs} -C "${dirPath}" .`
+        console.log('[packDirectory] Running:', cmd)
+        execSync(cmd, { stdio: 'pipe' })
+      }
+      
+      // 读取打包后的文件
+      const result = fs.readFileSync(tarFile)
+      console.log(`[packDirectory] Packed tar.gz size: ${result.length} bytes`)
+      
+      return result
+    } finally {
+      // 清理临时文件
+      try {
+        if (fs.existsSync(tarFile)) {
+          fs.unlinkSync(tarFile)
         }
+      } catch (e) {
+        console.error('[packDirectory] Failed to cleanup temp file:', e)
       }
     }
-    
-    scanFiles(dirPath)
-    console.log(`[packDirectory] Found ${filesToPack.length} files to pack`)
-    
-    // 使用 tar 库创建 tar.gz
-    const chunks: Buffer[] = []
-    
-    await tar.create(
-      {
-        gzip: true,
-        cwd: dirPath,
-        portable: true
-      },
-      filesToPack
-    ).on('data', (chunk: Buffer) => {
-      chunks.push(chunk)
-    }).on('end', () => {
-      console.log('[packDirectory] Tar creation completed')
-    })
-    
-    // 等待流完成
-    await new Promise<void>((resolve, reject) => {
-      const stream = tar.create(
-        {
-          gzip: true,
-          cwd: dirPath,
-          portable: true
-        },
-        filesToPack
-      )
-      
-      const outputChunks: Buffer[] = []
-      stream.on('data', (chunk: Buffer) => outputChunks.push(chunk))
-      stream.on('end', () => {
-        chunks.length = 0
-        chunks.push(...outputChunks)
-        resolve()
-      })
-      stream.on('error', reject)
-    })
-    
-    const result = Buffer.concat(chunks)
-    console.log(`[packDirectory] Final tar.gz size: ${result.length} bytes`)
-    
-    return result
   })
 
   ipcMain.handle('fs:readFile', async (_, filePath: string) => {
