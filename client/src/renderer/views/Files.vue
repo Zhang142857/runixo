@@ -1867,7 +1867,7 @@ async function uploadFolder() {
     uploadProgressText.value = '上传完成!'
     
     // 刷新文件列表
-    await loadFiles()
+    await loadDirectory()
     
     showUploadDialog.value = false
     selectedFolderPath.value = ''
