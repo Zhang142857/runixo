@@ -1,0 +1,205 @@
+# ServerHub Client 自动发布工作流
+#
+# 触发条件: 推送 client-v* 标签时自动构建并发布
+#
+# 使用方法:
+#   git tag client-v0.1.0
+#   git push origin client-v0.1.0
+#
+
+name: Release Client
+
+on:
+  push:
+    tags:
+      - 'client-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/client-}" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install
+
+      # 生成图标文件
+      - name: Generate icons (Linux)
+        if: matrix.platform == 'linux'
+        working-directory: client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin imagemagick
+          mkdir -p build
+          # 生成 PNG 图标
+          rsvg-convert -w 512 -h 512 build/logo.svg -o build/icon.png
+          # 生成不同尺寸
+          for size in 16 32 48 64 128 256 512; do
+            rsvg-convert -w $size -h $size build/logo.svg -o build/icon_${size}.png
+          done
+
+      - name: Generate icons (macOS)
+        if: matrix.platform == 'mac'
+        working-directory: client
+        run: |
+          mkdir -p build
+          # 使用 sips 转换 SVG 到 PNG
+          # macOS 需要先安装 librsvg
+          brew install librsvg
+          rsvg-convert -w 512 -h 512 build/logo.svg -o build/icon.png
+          # 创建 icns
+          mkdir -p build/icon.iconset
+          for size in 16 32 64 128 256 512; do
+            rsvg-convert -w $size -h $size build/logo.svg -o build/icon.iconset/icon_${size}x${size}.png
+            rsvg-convert -w $((size*2)) -h $((size*2)) build/logo.svg -o build/icon.iconset/icon_${size}x${size}@2x.png
+          done
+          iconutil -c icns build/icon.iconset -o build/icon.icns
+
+      - name: Generate icons (Windows)
+        if: matrix.platform == 'win'
+        working-directory: client
+        shell: pwsh
+        run: |
+          # 安装 Inkscape 用于 SVG 转换
+          choco install inkscape -y
+          $env:Path = "C:\Program Files\Inkscape\bin;$env:Path"
+
+          # 生成 PNG
+          inkscape --export-type=png --export-filename=build/icon.png -w 256 -h 256 build/logo.svg
+
+          # 生成不同尺寸的 PNG 用于 ICO
+          $sizes = @(16, 32, 48, 64, 128, 256)
+          foreach ($size in $sizes) {
+            inkscape --export-type=png --export-filename="build/icon_$size.png" -w $size -h $size build/logo.svg
+          }
+
+          # 使用 ImageMagick 创建 ICO
+          choco install imagemagick -y
+          $env:Path = "C:\Program Files\ImageMagick-7.1.1-Q16-HDRI;$env:Path"
+          magick build/icon_16.png build/icon_32.png build/icon_48.png build/icon_64.png build/icon_128.png build/icon_256.png build/icon.ico
+
+      - name: Build client
+        working-directory: client
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run build:${{ matrix.platform }}
+
+      - name: Upload artifacts (Windows)
+        if: matrix.platform == 'win'
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-windows
+          path: |
+            client/release/*.exe
+            client/release/*.zip
+
+      - name: Upload artifacts (macOS)
+        if: matrix.platform == 'mac'
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-macos
+          path: |
+            client/release/*.dmg
+            client/release/*.zip
+
+      - name: Upload artifacts (Linux)
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-linux
+          path: |
+            client/release/*.AppImage
+            client/release/*.deb
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la dist/
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/client-}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ServerHub Client ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## ServerHub Client ${{ steps.version.outputs.VERSION }}
+
+            AI-Native 服务器管理平台客户端
+
+            ### 下载
+
+            | 平台 | 文件 | 说明 |
+            |------|------|------|
+            | Windows | ServerHub-Setup-*.exe | Windows 安装程序 |
+            | Windows | ServerHub-*-portable.exe | Windows 便携版 |
+            | macOS | ServerHub-*.dmg | macOS 安装包 |
+            | Linux | ServerHub-*.AppImage | Linux AppImage |
+            | Linux | ServerHub-*.deb | Debian/Ubuntu 安装包 |
+
+            ### 系统要求
+
+            - Windows 10/11 (64-bit)
+            - macOS 10.15+ (Intel/Apple Silicon)
+            - Linux (Ubuntu 20.04+, Debian 11+, 或其他支持 AppImage 的发行版)
+
+            ### 首次使用
+
+            1. 下载并安装客户端
+            2. 在服务器上安装 Agent:
+               ```bash
+               curl -fsSL https://cdn.jsdelivr.net/gh/${{ github.repository }}@main/scripts/install.sh | sudo bash
+               ```
+            3. 在客户端中添加服务器，输入服务器地址、端口和认证令牌
+            4. 开始管理您的服务器！
+
+          files: |
+            dist/*
+          draft: false
+          prerelease: false
