@@ -22,7 +22,26 @@ import (
 // 全局路径验证器
 var pathValidator = security.NewPathValidator(security.DefaultSecurityConfig())
 
-// AgentServer 实现 AgentService
+// AgentServiceServer 定义服务接口
+type AgentServiceServer interface {
+	Authenticate(context.Context, *AuthRequest) (*AuthResponse, error)
+	GetSystemInfo(context.Context, *Empty) (*SystemInfo, error)
+	GetMetrics(*MetricsRequest, AgentService_GetMetricsServer) error
+	ExecuteCommand(context.Context, *CommandRequest) (*CommandResponse, error)
+	ExecuteShell(AgentService_ExecuteShellServer) error
+	ReadFile(context.Context, *FileRequest) (*FileContent, error)
+	WriteFile(context.Context, *WriteFileRequest) (*ActionResponse, error)
+	ListDirectory(context.Context, *DirRequest) (*DirContent, error)
+	DeleteFile(context.Context, *FileRequest) (*ActionResponse, error)
+	TailLog(*LogRequest, AgentService_TailLogServer) error
+	ListServices(context.Context, *ServiceFilter) (*ServiceList, error)
+	ServiceAction(context.Context, *ServiceActionRequest) (*ActionResponse, error)
+	ListProcesses(context.Context, *ProcessFilter) (*ProcessList, error)
+	KillProcess(context.Context, *KillProcessRequest) (*ActionResponse, error)
+	mustEmbedUnimplementedAgentServiceServer()
+}
+
+// AgentServer 实现 AgentServiceServer
 type AgentServer struct {
 	UnimplementedAgentServiceServer
 	version   string
@@ -48,7 +67,7 @@ func (s *AgentServer) Authenticate(ctx context.Context, req *AuthRequest) (*Auth
 }
 
 // GetSystemInfo 获取系统信息
-func (s *AgentServer) GetSystemInfo(ctx context.Context) (*SystemInfo, error) {
+func (s *AgentServer) GetSystemInfo(ctx context.Context, req *Empty) (*SystemInfo, error) {
 	info, err := s.collector.GetSystemInfo()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "获取系统信息失败: %v", err)
@@ -220,7 +239,6 @@ func (s *AgentServer) ListDirectory(ctx context.Context, req *DirRequest) (*DirC
 
 // DeleteFile 删除文件（带安全检查）
 func (s *AgentServer) DeleteFile(ctx context.Context, req *FileRequest) (*ActionResponse, error) {
-	// 安全检查：验证路径
 	cleanPath, err := security.SanitizePath(req.Path)
 	if err != nil {
 		return &ActionResponse{Success: false, Error: "路径安全检查失败: " + err.Error()}, nil
@@ -230,16 +248,13 @@ func (s *AgentServer) DeleteFile(ctx context.Context, req *FileRequest) (*Action
 		return &ActionResponse{Success: false, Error: "删除路径被拒绝: " + err.Error()}, nil
 	}
 
-	// 检查是否为符号链接
 	realPath, err := filepath.EvalSymlinks(cleanPath)
 	if err == nil && realPath != cleanPath {
-		// 重新验证真实路径
 		if err := pathValidator.ValidatePathForWrite(realPath); err != nil {
 			return &ActionResponse{Success: false, Error: "符号链接目标路径被拒绝: " + err.Error()}, nil
 		}
 	}
 
-	// 禁止删除根目录或系统关键目录
 	forbiddenPaths := []string{"/", "/bin", "/sbin", "/usr", "/etc", "/var", "/boot", "/root", "/home"}
 	for _, forbidden := range forbiddenPaths {
 		if cleanPath == forbidden {
@@ -254,8 +269,8 @@ func (s *AgentServer) DeleteFile(ctx context.Context, req *FileRequest) (*Action
 }
 
 // TailLog 日志流
-func (s *AgentServer) TailLog(ctx context.Context, req *LogRequest, stream AgentService_TailLogServer) error {
-	lineChan, err := executor.TailFile(ctx, req.Path, int(req.Lines), req.Follow)
+func (s *AgentServer) TailLog(req *LogRequest, stream AgentService_TailLogServer) error {
+	lineChan, err := executor.TailFile(stream.Context(), req.Path, int(req.Lines), req.Follow)
 	if err != nil {
 		return status.Errorf(codes.Internal, "读取日志失败: %v", err)
 	}
@@ -322,15 +337,328 @@ func (s *AgentServer) KillProcess(ctx context.Context, req *KillProcessRequest) 
 }
 
 // RegisterAgentServiceServer 注册服务到 gRPC 服务器
-func RegisterAgentServiceServer(s *grpc.Server, srv *AgentServer) {
-	s.RegisterService(&_AgentService_serviceDesc, srv)
+func RegisterAgentServiceServer(s *grpc.Server, srv AgentServiceServer) {
+	s.RegisterService(&AgentService_ServiceDesc, srv)
 }
 
-// gRPC 服务描述
-var _AgentService_serviceDesc = grpc.ServiceDesc{
+// AgentService_ServiceDesc gRPC 服务描述
+var AgentService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "serverhub.AgentService",
-	HandlerType: (*AgentServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams:     []grpc.StreamDesc{},
-	Metadata:    "agent.proto",
+	HandlerType: (*AgentServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Authenticate",
+			Handler:    _AgentService_Authenticate_Handler,
+		},
+		{
+			MethodName: "GetSystemInfo",
+			Handler:    _AgentService_GetSystemInfo_Handler,
+		},
+		{
+			MethodName: "ExecuteCommand",
+			Handler:    _AgentService_ExecuteCommand_Handler,
+		},
+		{
+			MethodName: "ReadFile",
+			Handler:    _AgentService_ReadFile_Handler,
+		},
+		{
+			MethodName: "WriteFile",
+			Handler:    _AgentService_WriteFile_Handler,
+		},
+		{
+			MethodName: "ListDirectory",
+			Handler:    _AgentService_ListDirectory_Handler,
+		},
+		{
+			MethodName: "DeleteFile",
+			Handler:    _AgentService_DeleteFile_Handler,
+		},
+		{
+			MethodName: "ListServices",
+			Handler:    _AgentService_ListServices_Handler,
+		},
+		{
+			MethodName: "ServiceAction",
+			Handler:    _AgentService_ServiceAction_Handler,
+		},
+		{
+			MethodName: "ListProcesses",
+			Handler:    _AgentService_ListProcesses_Handler,
+		},
+		{
+			MethodName: "KillProcess",
+			Handler:    _AgentService_KillProcess_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetMetrics",
+			Handler:       _AgentService_GetMetrics_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ExecuteShell",
+			Handler:       _AgentService_ExecuteShell_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "TailLog",
+			Handler:       _AgentService_TailLog_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "agent.proto",
+}
+
+// Handler 函数
+func _AgentService_Authenticate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).Authenticate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/Authenticate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).Authenticate(ctx, req.(*AuthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_GetSystemInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).GetSystemInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/GetSystemInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).GetSystemInfo(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ExecuteCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ExecuteCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/ExecuteCommand",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ExecuteCommand(ctx, req.(*CommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ReadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ReadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/ReadFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ReadFile(ctx, req.(*FileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_WriteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WriteFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).WriteFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/WriteFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).WriteFile(ctx, req.(*WriteFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ListDirectory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DirRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ListDirectory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/ListDirectory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ListDirectory(ctx, req.(*DirRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_DeleteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).DeleteFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/DeleteFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).DeleteFile(ctx, req.(*FileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ListServices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServiceFilter)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ListServices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/ListServices",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ListServices(ctx, req.(*ServiceFilter))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServiceActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ServiceAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/ServiceAction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ServiceAction(ctx, req.(*ServiceActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ListProcesses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessFilter)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ListProcesses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/ListProcesses",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ListProcesses(ctx, req.(*ProcessFilter))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_KillProcess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(KillProcessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).KillProcess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/serverhub.AgentService/KillProcess",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).KillProcess(ctx, req.(*KillProcessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_GetMetrics_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(MetricsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AgentServiceServer).GetMetrics(m, &agentServiceGetMetricsServer{stream})
+}
+
+type agentServiceGetMetricsServer struct {
+	grpc.ServerStream
+}
+
+func (x *agentServiceGetMetricsServer) Send(m *Metrics) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _AgentService_ExecuteShell_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AgentServiceServer).ExecuteShell(&agentServiceExecuteShellServer{stream})
+}
+
+type agentServiceExecuteShellServer struct {
+	grpc.ServerStream
+}
+
+func (x *agentServiceExecuteShellServer) Send(m *ShellOutput) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *agentServiceExecuteShellServer) Recv() (*ShellInput, error) {
+	m := new(ShellInput)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _AgentService_TailLog_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(LogRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AgentServiceServer).TailLog(m, &agentServiceTailLogServer{stream})
+}
+
+type agentServiceTailLogServer struct {
+	grpc.ServerStream
+}
+
+func (x *agentServiceTailLogServer) Send(m *LogLine) error {
+	return x.ServerStream.SendMsg(m)
 }

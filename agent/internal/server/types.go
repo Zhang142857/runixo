@@ -3,8 +3,12 @@ package server
 import (
 	"context"
 
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// Empty 空消息
+type Empty struct{}
 
 // 认证相关
 type AuthRequest struct {
@@ -318,83 +322,66 @@ type ActionResponse struct {
 	Error   string
 }
 
-// gRPC 服务接口
-type AgentServiceServer interface {
-	Authenticate(*AuthRequest) (*AuthResponse, error)
-	GetSystemInfo() (*SystemInfo, error)
-	GetMetrics(*MetricsRequest, AgentService_GetMetricsServer) error
-	ExecuteCommand(*CommandRequest) (*CommandResponse, error)
-	ExecuteShell(AgentService_ExecuteShellServer) error
-	ReadFile(*FileRequest) (*FileContent, error)
-	WriteFile(*WriteFileRequest) (*ActionResponse, error)
-	ListDirectory(*DirRequest) (*DirContent, error)
-	DeleteFile(*FileRequest) (*ActionResponse, error)
-	TailLog(*LogRequest, AgentService_TailLogServer) error
-	ListServices(*ServiceFilter) (*ServiceList, error)
-	ServiceAction(*ServiceActionRequest) (*ActionResponse, error)
-	ListProcesses(*ProcessFilter) (*ProcessList, error)
-	KillProcess(*KillProcessRequest) (*ActionResponse, error)
-}
-
 // 流式服务接口
 type AgentService_GetMetricsServer interface {
 	Send(*Metrics) error
-	Context() context.Context
+	grpc.ServerStream
 }
 
 type AgentService_ExecuteShellServer interface {
 	Send(*ShellOutput) error
 	Recv() (*ShellInput, error)
-	Context() context.Context
+	grpc.ServerStream
 }
 
 type AgentService_TailLogServer interface {
 	Send(*LogLine) error
-	Context() context.Context
+	grpc.ServerStream
 }
 
 // UnimplementedAgentServiceServer 用于向前兼容
 type UnimplementedAgentServiceServer struct{}
 
-func (UnimplementedAgentServiceServer) Authenticate(*AuthRequest) (*AuthResponse, error) {
+func (UnimplementedAgentServiceServer) Authenticate(context.Context, *AuthRequest) (*AuthResponse, error) {
 	return nil, nil
 }
-func (UnimplementedAgentServiceServer) GetSystemInfo() (*SystemInfo, error) {
+func (UnimplementedAgentServiceServer) GetSystemInfo(context.Context, *Empty) (*SystemInfo, error) {
 	return nil, nil
 }
 func (UnimplementedAgentServiceServer) GetMetrics(*MetricsRequest, AgentService_GetMetricsServer) error {
 	return nil
 }
-func (UnimplementedAgentServiceServer) ExecuteCommand(*CommandRequest) (*CommandResponse, error) {
+func (UnimplementedAgentServiceServer) ExecuteCommand(context.Context, *CommandRequest) (*CommandResponse, error) {
 	return nil, nil
 }
 func (UnimplementedAgentServiceServer) ExecuteShell(AgentService_ExecuteShellServer) error {
 	return nil
 }
-func (UnimplementedAgentServiceServer) ReadFile(*FileRequest) (*FileContent, error) {
+func (UnimplementedAgentServiceServer) ReadFile(context.Context, *FileRequest) (*FileContent, error) {
 	return nil, nil
 }
-func (UnimplementedAgentServiceServer) WriteFile(*WriteFileRequest) (*ActionResponse, error) {
+func (UnimplementedAgentServiceServer) WriteFile(context.Context, *WriteFileRequest) (*ActionResponse, error) {
 	return nil, nil
 }
-func (UnimplementedAgentServiceServer) ListDirectory(*DirRequest) (*DirContent, error) {
+func (UnimplementedAgentServiceServer) ListDirectory(context.Context, *DirRequest) (*DirContent, error) {
 	return nil, nil
 }
-func (UnimplementedAgentServiceServer) DeleteFile(*FileRequest) (*ActionResponse, error) {
+func (UnimplementedAgentServiceServer) DeleteFile(context.Context, *FileRequest) (*ActionResponse, error) {
 	return nil, nil
 }
 func (UnimplementedAgentServiceServer) TailLog(*LogRequest, AgentService_TailLogServer) error {
 	return nil
 }
-func (UnimplementedAgentServiceServer) ListServices(*ServiceFilter) (*ServiceList, error) {
+func (UnimplementedAgentServiceServer) ListServices(context.Context, *ServiceFilter) (*ServiceList, error) {
 	return nil, nil
 }
-func (UnimplementedAgentServiceServer) ServiceAction(*ServiceActionRequest) (*ActionResponse, error) {
+func (UnimplementedAgentServiceServer) ServiceAction(context.Context, *ServiceActionRequest) (*ActionResponse, error) {
 	return nil, nil
 }
-func (UnimplementedAgentServiceServer) ListProcesses(*ProcessFilter) (*ProcessList, error) {
+func (UnimplementedAgentServiceServer) ListProcesses(context.Context, *ProcessFilter) (*ProcessList, error) {
 	return nil, nil
 }
-func (UnimplementedAgentServiceServer) KillProcess(*KillProcessRequest) (*ActionResponse, error) {
+func (UnimplementedAgentServiceServer) KillProcess(context.Context, *KillProcessRequest) (*ActionResponse, error) {
 	return nil, nil
 }
+func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
