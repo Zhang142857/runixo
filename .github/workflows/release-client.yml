@@ -58,8 +58,10 @@ jobs:
       - name: Build Vite
         working-directory: client
         run: |
-          pnpm run typecheck || true
           npx vite build
+          ls -la dist/ || echo "No dist"
+          ls -la dist/main/ || echo "No dist/main"
+          ls -la dist/renderer/ || echo "No dist/renderer"
 
       - name: Build Electron (Windows)
         if: matrix.platform == 'win'

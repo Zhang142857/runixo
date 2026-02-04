@@ -2,6 +2,7 @@
   "name": "serverhub-client",
   "version": "0.1.0",
   "description": "AI-Native Server Management Platform",
+  "author": "ServerHub Team",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "vite",
