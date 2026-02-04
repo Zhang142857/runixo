@@ -1,0 +1,27 @@
+# ServerHub Agent 配置文件
+
+server:
+  # 监听地址
+  host: "0.0.0.0"
+  # 监听端口
+  port: 9527
+  # TLS 配置
+  tls:
+    enabled: false
+    cert: "/etc/serverhub/cert.pem"
+    key: "/etc/serverhub/key.pem"
+
+# 认证配置
+auth:
+  # 认证令牌（使用 serverhub-agent --gen-token 生成）
+  token: ""
+
+# 监控配置
+metrics:
+  # 采集间隔（秒）
+  interval: 2
+
+# 日志配置
+log:
+  # 日志级别: debug, info, warn, error
+  level: "info"

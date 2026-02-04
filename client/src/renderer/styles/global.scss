@@ -1,0 +1,187 @@
+:root {
+  --bg-color: #0f0f1a;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #252542;
+  --text-color: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --primary-color: #6366f1;
+  --primary-hover: #818cf8;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --border-color: #2e2e4a;
+  --sidebar-width: 240px;
+  --header-height: 56px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+// Element Plus 主题覆盖
+.el-button--primary {
+  --el-button-bg-color: var(--primary-color);
+  --el-button-border-color: var(--primary-color);
+  --el-button-hover-bg-color: var(--primary-hover);
+  --el-button-hover-border-color: var(--primary-hover);
+}
+
+.el-card {
+  --el-card-bg-color: var(--bg-secondary);
+  --el-card-border-color: var(--border-color);
+  border-radius: 12px;
+}
+
+.el-dialog {
+  --el-dialog-bg-color: var(--bg-secondary);
+  --el-dialog-border-radius: 12px;
+}
+
+.el-input {
+  --el-input-bg-color: var(--bg-tertiary);
+  --el-input-border-color: var(--border-color);
+  --el-input-text-color: var(--text-color);
+  --el-input-placeholder-color: var(--text-secondary);
+}
+
+.el-select {
+  --el-select-input-focus-border-color: var(--primary-color);
+}
+
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: var(--bg-tertiary);
+  --el-table-row-hover-bg-color: var(--bg-tertiary);
+  --el-table-border-color: var(--border-color);
+  --el-table-text-color: var(--text-color);
+  --el-table-header-text-color: var(--text-secondary);
+}
+
+.el-menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: var(--text-secondary);
+  --el-menu-active-color: var(--primary-color);
+  --el-menu-hover-bg-color: var(--bg-tertiary);
+  border-right: none !important;
+}
+
+.el-tag {
+  border-radius: 6px;
+}
+
+// 通用工具类
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 状态颜色
+.status-connected {
+  color: var(--success-color);
+}
+
+.status-disconnected {
+  color: var(--text-secondary);
+}
+
+.status-error {
+  color: var(--danger-color);
+}
+
+.status-connecting {
+  color: var(--warning-color);
+}
+
+// 动画
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

@@ -1,0 +1,64 @@
+# 依赖目录
+node_modules/
+vendor/
+
+# 构建产物
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go 构建
+*.test
+*.out
+coverage.out
+coverage.html
+
+# 环境变量和敏感信息
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+
+# IDE 和编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Electron 构建
+release/
+*.asar
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 缓存
+.cache/
+.parcel-cache/
+.eslintcache
+
+# pnpm
+.pnpm-store/
+
+# 操作系统文件
+.DS_Store
+Desktop.ini

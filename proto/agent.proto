@@ -1,0 +1,317 @@
+syntax = "proto3";
+
+package serverhub;
+
+option go_package = "github.com/serverhub/agent/api/proto";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// AgentService - 核心Agent服务（命令和文件操作代理）
+service AgentService {
+  // 认证
+  rpc Authenticate(AuthRequest) returns (AuthResponse);
+
+  // 系统信息
+  rpc GetSystemInfo(google.protobuf.Empty) returns (SystemInfo);
+  rpc GetMetrics(MetricsRequest) returns (stream Metrics);
+
+  // 命令执行
+  rpc ExecuteCommand(CommandRequest) returns (CommandResponse);
+  rpc ExecuteShell(stream ShellInput) returns (stream ShellOutput);
+
+  // 文件操作
+  rpc ReadFile(FileRequest) returns (FileContent);
+  rpc WriteFile(WriteFileRequest) returns (ActionResponse);
+  rpc ListDirectory(DirRequest) returns (DirContent);
+  rpc DeleteFile(FileRequest) returns (ActionResponse);
+  rpc UploadFile(stream FileChunk) returns (ActionResponse);
+  rpc DownloadFile(FileRequest) returns (stream FileChunk);
+
+  // 日志流
+  rpc TailLog(LogRequest) returns (stream LogLine);
+
+  // 服务管理
+  rpc ListServices(ServiceFilter) returns (ServiceList);
+  rpc ServiceAction(ServiceActionRequest) returns (ActionResponse);
+
+  // 进程管理
+  rpc ListProcesses(ProcessFilter) returns (ProcessList);
+  rpc KillProcess(KillProcessRequest) returns (ActionResponse);
+}
+
+// 认证相关
+message AuthRequest {
+  string token = 1;
+  string client_version = 2;
+}
+
+message AuthResponse {
+  bool success = 1;
+  string message = 2;
+  string agent_version = 3;
+  int64 expires_at = 4;
+}
+
+// 系统信息
+message SystemInfo {
+  string hostname = 1;
+  string os = 2;
+  string platform = 3;
+  string platform_version = 4;
+  string kernel_version = 5;
+  string arch = 6;
+  int64 uptime = 7;
+  int64 boot_time = 8;
+
+  CpuInfo cpu = 10;
+  MemoryInfo memory = 11;
+  repeated DiskInfo disks = 12;
+  repeated NetworkInfo networks = 13;
+
+  // GPU信息（可选）
+  repeated GpuInfo gpus = 20;
+}
+
+message CpuInfo {
+  string model = 1;
+  int32 cores = 2;
+  int32 threads = 3;
+  double frequency = 4;
+  repeated double usage_per_core = 5;
+}
+
+message MemoryInfo {
+  uint64 total = 1;
+  uint64 available = 2;
+  uint64 used = 3;
+  double used_percent = 4;
+  uint64 swap_total = 5;
+  uint64 swap_used = 6;
+}
+
+message DiskInfo {
+  string device = 1;
+  string mountpoint = 2;
+  string fstype = 3;
+  uint64 total = 4;
+  uint64 used = 5;
+  uint64 free = 6;
+  double used_percent = 7;
+}
+
+message NetworkInfo {
+  string name = 1;
+  repeated string addresses = 2;
+  string mac = 3;
+  uint64 bytes_sent = 4;
+  uint64 bytes_recv = 5;
+}
+
+message GpuInfo {
+  string name = 1;
+  string driver_version = 2;
+  uint64 memory_total = 3;
+  uint64 memory_used = 4;
+  double temperature = 5;
+  double utilization = 6;
+}
+
+// 监控指标
+message MetricsRequest {
+  int32 interval_seconds = 1;  // 采集间隔
+  repeated string metrics = 2;  // 指定采集的指标类型
+}
+
+message Metrics {
+  google.protobuf.Timestamp timestamp = 1;
+  double cpu_usage = 2;
+  double memory_usage = 3;
+  repeated DiskMetric disk_metrics = 4;
+  repeated NetworkMetric network_metrics = 5;
+  double load_1 = 6;
+  double load_5 = 7;
+  double load_15 = 8;
+}
+
+message DiskMetric {
+  string device = 1;
+  uint64 read_bytes = 2;
+  uint64 write_bytes = 3;
+  uint64 read_count = 4;
+  uint64 write_count = 5;
+}
+
+message NetworkMetric {
+  string interface = 1;
+  uint64 bytes_sent = 2;
+  uint64 bytes_recv = 3;
+  uint64 packets_sent = 4;
+  uint64 packets_recv = 5;
+}
+
+// 命令执行
+message CommandRequest {
+  string command = 1;
+  repeated string args = 2;
+  string working_dir = 3;
+  map<string, string> env = 4;
+  int32 timeout_seconds = 5;
+  bool sudo = 6;
+}
+
+message CommandResponse {
+  int32 exit_code = 1;
+  string stdout = 2;
+  string stderr = 3;
+  int64 duration_ms = 4;
+}
+
+message ShellInput {
+  oneof input {
+    ShellStart start = 1;
+    bytes data = 2;
+    ShellResize resize = 3;
+  }
+}
+
+message ShellStart {
+  string shell = 1;  // bash, zsh, sh
+  int32 rows = 2;
+  int32 cols = 3;
+  map<string, string> env = 4;
+}
+
+message ShellResize {
+  int32 rows = 1;
+  int32 cols = 2;
+}
+
+message ShellOutput {
+  bytes data = 1;
+}
+
+// 文件操作
+message FileRequest {
+  string path = 1;
+}
+
+message FileContent {
+  bytes content = 1;
+  FileInfo info = 2;
+}
+
+message FileInfo {
+  string name = 1;
+  string path = 2;
+  int64 size = 3;
+  int64 mode = 4;
+  int64 mod_time = 5;
+  bool is_dir = 6;
+  string owner = 7;
+  string group = 8;
+}
+
+message WriteFileRequest {
+  string path = 1;
+  bytes content = 2;
+  int64 mode = 3;
+  bool create_dirs = 4;
+}
+
+message DirRequest {
+  string path = 1;
+  bool recursive = 2;
+  bool show_hidden = 3;
+}
+
+message DirContent {
+  string path = 1;
+  repeated FileInfo files = 2;
+}
+
+message FileChunk {
+  string path = 1;
+  bytes data = 2;
+  int64 offset = 3;
+  bool is_last = 4;
+}
+
+// 日志
+message LogRequest {
+  string path = 1;
+  int32 lines = 2;
+  bool follow = 3;
+}
+
+message LogLine {
+  string content = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+
+// 服务管理
+message ServiceFilter {
+  string name_filter = 1;
+  string status_filter = 2;
+}
+
+message ServiceList {
+  repeated ServiceInfo services = 1;
+}
+
+message ServiceInfo {
+  string name = 1;
+  string status = 2;
+  string description = 3;
+  bool enabled = 4;
+  int32 pid = 5;
+  int64 uptime = 6;
+}
+
+message ServiceActionRequest {
+  string name = 1;
+  ServiceAction action = 2;
+}
+
+enum ServiceAction {
+  SERVICE_START = 0;
+  SERVICE_STOP = 1;
+  SERVICE_RESTART = 2;
+  SERVICE_ENABLE = 3;
+  SERVICE_DISABLE = 4;
+}
+
+// 进程管理
+message ProcessFilter {
+  string name_filter = 1;
+  string user_filter = 2;
+}
+
+message ProcessList {
+  repeated ProcessInfo processes = 1;
+}
+
+message ProcessInfo {
+  int32 pid = 1;
+  int32 ppid = 2;
+  string name = 3;
+  string user = 4;
+  string status = 5;
+  double cpu_percent = 6;
+  double memory_percent = 7;
+  uint64 memory_rss = 8;
+  int64 create_time = 9;
+  string cmdline = 10;
+}
+
+message KillProcessRequest {
+  int32 pid = 1;
+  int32 signal = 2;  // 默认 SIGTERM (15)
+}
+
+// 通用响应
+message ActionResponse {
+  bool success = 1;
+  string message = 2;
+  string error = 3;
+}
