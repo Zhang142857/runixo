@@ -33,70 +33,41 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+      - name: Install pnpm
+        run: npm install -g pnpm@8
 
       - name: Install dependencies
         working-directory: client
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install
 
-      - name: Build Vite
-        working-directory: client
-        run: |
-          npx vite build
-          ls -la dist/ || echo "No dist"
-          ls -la dist/main/ || echo "No dist/main"
-          ls -la dist/renderer/ || echo "No dist/renderer"
-
-      - name: Build Electron (Windows)
-        if: matrix.platform == 'win'
-        working-directory: client
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win --publish never
-
-      - name: Build Electron (macOS)
-        if: matrix.platform == 'mac'
-        working-directory: client
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --mac --publish never
-
-      - name: Build Electron (Linux)
-        if: matrix.platform == 'linux'
-        working-directory: client
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux --publish never
-
-      - name: List release files
+      - name: Build application
         working-directory: client
         shell: bash
-        run: ls -la release/ || echo "No release directory"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx vite build
+          echo "=== Vite build complete ==="
+          ls -la dist/
+          ls -la dist/main/
+          ls -la dist/renderer/
+          echo "=== Starting electron-builder ==="
+          if [ "${{ matrix.platform }}" = "win" ]; then
+            npx electron-builder --win --publish never
+          elif [ "${{ matrix.platform }}" = "mac" ]; then
+            npx electron-builder --mac --publish never
+          else
+            npx electron-builder --linux --publish never
+          fi
+          echo "=== Build complete ==="
+          ls -la release/
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'win'
         uses: actions/upload-artifact@v4
         with:
           name: client-windows
-          path: |
-            client/release/*.exe
-          if-no-files-found: error
+          path: client/release/*.exe
 
       - name: Upload artifacts (macOS)
         if: matrix.platform == 'mac'
@@ -106,7 +77,6 @@ jobs:
           path: |
             client/release/*.dmg
             client/release/*.zip
-          if-no-files-found: error
 
       - name: Upload artifacts (Linux)
         if: matrix.platform == 'linux'
@@ -116,7 +86,6 @@ jobs:
           path: |
             client/release/*.AppImage
             client/release/*.deb
-          if-no-files-found: error
 
   release:
     name: Release
@@ -174,7 +143,6 @@ jobs:
             3. 在客户端中添加服务器
             4. 开始管理您的服务器！
 
-          files: |
-            dist/*
+          files: dist/*
           draft: false
           prerelease: false
