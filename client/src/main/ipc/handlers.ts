@@ -6,6 +6,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as zlib from 'zlib'
 import { promisify } from 'util'
+import * as tar from 'tar'
+import { pipeline } from 'stream/promises'
 
 const gzip = promisify(zlib.gzip)
 
@@ -473,87 +475,69 @@ export function setupIpcHandlers() {
   ipcMain.handle('fs:packDirectory', async (_, dirPath: string, options?: { ignore?: string[] }) => {
     const ignore = options?.ignore || ['node_modules', '.git', '__pycache__', '.venv', 'venv', '.next', '.nuxt', 'target', 'vendor', 'dist', 'build']
     
-    // 使用 tar 格式打包（简化版，直接创建 tar 数据）
-    const tarChunks: Buffer[] = []
+    // 收集所有要打包的文件（相对路径）
+    const filesToPack: string[] = []
     
-    function addFile(filePath: string, relativePath: string) {
-      const stats = fs.statSync(filePath)
-      const content = fs.readFileSync(filePath)
-      
-      // TAR header (512 bytes)
-      const header = Buffer.alloc(512)
-      
-      // 文件名 (100 bytes)
-      header.write(relativePath.slice(0, 99), 0, 100)
-      
-      // 文件模式 (8 bytes)
-      header.write('0000644 ', 100, 8)
-      
-      // UID (8 bytes)
-      header.write('0000000 ', 108, 8)
-      
-      // GID (8 bytes)
-      header.write('0000000 ', 116, 8)
-      
-      // 文件大小 (12 bytes, octal)
-      header.write(stats.size.toString(8).padStart(11, '0') + ' ', 124, 12)
-      
-      // 修改时间 (12 bytes, octal)
-      header.write(Math.floor(stats.mtime.getTime() / 1000).toString(8).padStart(11, '0') + ' ', 136, 12)
-      
-      // 校验和占位 (8 bytes)
-      header.write('        ', 148, 8)
-      
-      // 类型标志 (1 byte) - '0' 表示普通文件
-      header.write('0', 156, 1)
-      
-      // 计算校验和
-      let checksum = 0
-      for (let i = 0; i < 512; i++) {
-        checksum += header[i]
-      }
-      header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 8)
-      
-      tarChunks.push(header)
-      tarChunks.push(content)
-      
-      // 填充到 512 字节边界
-      const padding = 512 - (content.length % 512)
-      if (padding < 512) {
-        tarChunks.push(Buffer.alloc(padding))
-      }
-    }
-    
-    function scanAndAdd(currentPath: string, relativePath: string = '') {
+    function scanFiles(currentPath: string, relativePath: string = '') {
       const entries = fs.readdirSync(currentPath, { withFileTypes: true })
       for (const entry of entries) {
         if (ignore.includes(entry.name)) continue
         
         const fullPath = path.join(currentPath, entry.name)
-        const relPath = relativePath ? `${relativePath}/${entry.name}` : entry.name
+        const relPath = relativePath ? path.join(relativePath, entry.name) : entry.name
         
         if (entry.isDirectory()) {
-          scanAndAdd(fullPath, relPath)
+          scanFiles(fullPath, relPath)
         } else {
-          try {
-            addFile(fullPath, relPath)
-          } catch (e) {
-            console.error(`Failed to add file ${fullPath}:`, e)
-          }
+          filesToPack.push(relPath)
         }
       }
     }
     
-    scanAndAdd(dirPath)
+    scanFiles(dirPath)
+    console.log(`[packDirectory] Found ${filesToPack.length} files to pack`)
     
-    // 添加 tar 结束标记 (两个 512 字节的空块)
-    tarChunks.push(Buffer.alloc(1024))
+    // 使用 tar 库创建 tar.gz
+    const chunks: Buffer[] = []
     
-    const tarData = Buffer.concat(tarChunks)
+    await tar.create(
+      {
+        gzip: true,
+        cwd: dirPath,
+        portable: true
+      },
+      filesToPack
+    ).on('data', (chunk: Buffer) => {
+      chunks.push(chunk)
+    }).on('end', () => {
+      console.log('[packDirectory] Tar creation completed')
+    })
     
-    // gzip 压缩
-    const gzipped = await gzip(tarData)
-    return gzipped
+    // 等待流完成
+    await new Promise<void>((resolve, reject) => {
+      const stream = tar.create(
+        {
+          gzip: true,
+          cwd: dirPath,
+          portable: true
+        },
+        filesToPack
+      )
+      
+      const outputChunks: Buffer[] = []
+      stream.on('data', (chunk: Buffer) => outputChunks.push(chunk))
+      stream.on('end', () => {
+        chunks.length = 0
+        chunks.push(...outputChunks)
+        resolve()
+      })
+      stream.on('error', reject)
+    })
+    
+    const result = Buffer.concat(chunks)
+    console.log(`[packDirectory] Final tar.gz size: ${result.length} bytes`)
+    
+    return result
   })
 
   ipcMain.handle('fs:readFile', async (_, filePath: string) => {
