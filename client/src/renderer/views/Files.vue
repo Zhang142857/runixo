@@ -1871,39 +1871,48 @@ async function uploadFolder() {
       ignore: ['node_modules', '.git', '__pycache__', '.venv', 'venv', '.next', '.nuxt', 'target', 'vendor']
     })
     
-    // tarData 可能是 Buffer 或者被序列化的对象，需要转换
-    let tarBuffer: Buffer
-    if (Buffer.isBuffer(tarData)) {
-      tarBuffer = tarData
+    // tarData 从 IPC 返回后是 Uint8Array 或序列化的对象
+    let tarBytes: Uint8Array
+    if (tarData instanceof Uint8Array) {
+      tarBytes = tarData
     } else if (tarData && typeof tarData === 'object' && tarData.type === 'Buffer' && Array.isArray(tarData.data)) {
       // IPC 序列化后的 Buffer 格式
-      tarBuffer = Buffer.from(tarData.data)
-    } else if (tarData instanceof Uint8Array) {
-      tarBuffer = Buffer.from(tarData)
+      tarBytes = new Uint8Array(tarData.data)
+    } else if (ArrayBuffer.isView(tarData)) {
+      tarBytes = new Uint8Array(tarData.buffer)
     } else {
+      console.error('[uploadFolder] Unknown tarData type:', typeof tarData, tarData)
       throw new Error('Invalid tar data format')
     }
     
-    console.log('[uploadFolder] Tar buffer size:', tarBuffer.length)
+    console.log('[uploadFolder] Tar bytes size:', tarBytes.length)
     uploadProgress.value = 30
     
-    if (tarBuffer.length < 100) {
+    if (tarBytes.length < 100) {
       throw new Error('打包文件太小，可能打包失败')
     }
     
-    // 转换为 base64 并分块上传
+    // 转换为 base64
     uploadProgressText.value = '上传中...'
-    const base64 = tarBuffer.toString('base64')
+    
+    // 使用浏览器 API 转换为 base64
+    let base64 = ''
+    const chunkSize = 8192
+    for (let i = 0; i < tarBytes.length; i += chunkSize) {
+      const chunk = tarBytes.slice(i, i + chunkSize)
+      base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)))
+    }
+    
     console.log('[uploadFolder] Base64 length:', base64.length)
     
-    const chunkSize = 500 * 1024
-    const chunks = Math.ceil(base64.length / chunkSize)
+    const uploadChunkSize = 500 * 1024
+    const chunks = Math.ceil(base64.length / uploadChunkSize)
     
     // 清空临时文件
     await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 'rm -f /tmp/upload.tar.gz.b64'])
     
     for (let i = 0; i < chunks; i++) {
-      const chunk = base64.slice(i * chunkSize, (i + 1) * chunkSize)
+      const chunk = base64.slice(i * uploadChunkSize, (i + 1) * uploadChunkSize)
       await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `printf '%s' "${chunk}" >> /tmp/upload.tar.gz.b64`])
       uploadProgress.value = 30 + Math.floor((i / chunks) * 50)
       uploadProgressText.value = `上传中... ${i + 1}/${chunks}`
