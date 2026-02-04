@@ -1893,48 +1893,95 @@ async function uploadFolder() {
     }
     
     // 转换为 base64
-    uploadProgressText.value = '上传中...'
+    uploadProgressText.value = '编码中...'
     
     // 使用浏览器 API 转换为 base64
     let base64 = ''
-    const chunkSize = 8192
-    for (let i = 0; i < tarBytes.length; i += chunkSize) {
-      const chunk = tarBytes.slice(i, i + chunkSize)
+    const encodeChunkSize = 32768 // 32KB chunks for encoding
+    for (let i = 0; i < tarBytes.length; i += encodeChunkSize) {
+      const chunk = tarBytes.slice(i, Math.min(i + encodeChunkSize, tarBytes.length))
       base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)))
     }
     
     console.log('[uploadFolder] Base64 length:', base64.length)
     
-    const uploadChunkSize = 500 * 1024
+    // 清空临时文件
+    uploadProgressText.value = '准备上传...'
+    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 'rm -f /tmp/upload.tar.gz.b64 /tmp/upload.tar.gz'])
+    
+    // 分块上传 - 使用 echo 和重定向，避免 printf 的特殊字符问题
+    const uploadChunkSize = 200 * 1024 // 200KB per chunk (smaller to avoid command line limits)
     const chunks = Math.ceil(base64.length / uploadChunkSize)
     
-    // 清空临时文件
-    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 'rm -f /tmp/upload.tar.gz.b64'])
+    console.log('[uploadFolder] Uploading in', chunks, 'chunks')
     
     for (let i = 0; i < chunks; i++) {
       const chunk = base64.slice(i * uploadChunkSize, (i + 1) * uploadChunkSize)
-      await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `printf '%s' "${chunk}" >> /tmp/upload.tar.gz.b64`])
-      uploadProgress.value = 30 + Math.floor((i / chunks) * 50)
+      
+      // 使用 cat 和 heredoc 来避免特殊字符问题
+      const result = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
+        `cat >> /tmp/upload.tar.gz.b64 << 'ENDOFCHUNK'\n${chunk}\nENDOFCHUNK`
+      ])
+      
+      if (result.exit_code !== 0) {
+        console.error('[uploadFolder] Upload chunk failed:', result.stderr)
+        throw new Error(`上传分块 ${i + 1} 失败: ${result.stderr}`)
+      }
+      
+      uploadProgress.value = 30 + Math.floor(((i + 1) / chunks) * 50)
       uploadProgressText.value = `上传中... ${i + 1}/${chunks}`
+    }
+    
+    // 检查上传的文件
+    const checkResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
+      'ls -la /tmp/upload.tar.gz.b64 && wc -c < /tmp/upload.tar.gz.b64'
+    ])
+    console.log('[uploadFolder] Upload check:', checkResult.stdout)
+    
+    if (checkResult.exit_code !== 0) {
+      throw new Error('上传文件检查失败: ' + checkResult.stderr)
     }
     
     // 解码并解压
     uploadProgressText.value = '解压文件...'
     uploadProgress.value = 85
     
-    // 先检查上传的文件大小
-    const checkResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 'wc -c < /tmp/upload.tar.gz.b64'])
-    console.log('[uploadFolder] Uploaded b64 size:', checkResult.stdout.trim())
+    // 分步执行，便于调试
+    // 1. 移除 heredoc 产生的换行符
+    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
+      "tr -d '\\n' < /tmp/upload.tar.gz.b64 > /tmp/upload.tar.gz.b64.clean && mv /tmp/upload.tar.gz.b64.clean /tmp/upload.tar.gz.b64"
+    ])
     
-    // 解码并解压
+    // 2. base64 解码
+    const decodeResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
+      'base64 -d /tmp/upload.tar.gz.b64 > /tmp/upload.tar.gz'
+    ])
+    
+    if (decodeResult.exit_code !== 0) {
+      console.error('[uploadFolder] Decode failed:', decodeResult.stderr)
+      throw new Error('Base64 解码失败: ' + decodeResult.stderr)
+    }
+    
+    // 3. 检查 tar.gz 文件
+    const tarCheckResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
+      'ls -la /tmp/upload.tar.gz && file /tmp/upload.tar.gz'
+    ])
+    console.log('[uploadFolder] Tar file check:', tarCheckResult.stdout)
+    
+    // 4. 解压
     const extractResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-      `base64 -d /tmp/upload.tar.gz.b64 > /tmp/upload.tar.gz && tar -xzf /tmp/upload.tar.gz -C "${fullTargetPath}" && rm -f /tmp/upload.tar.gz /tmp/upload.tar.gz.b64`
+      `tar -xzf /tmp/upload.tar.gz -C "${fullTargetPath}"`
     ])
     
     if (extractResult.exit_code !== 0) {
       console.error('[uploadFolder] Extract failed:', extractResult.stderr)
       throw new Error('解压失败: ' + extractResult.stderr)
     }
+    
+    // 5. 清理
+    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
+      'rm -f /tmp/upload.tar.gz /tmp/upload.tar.gz.b64'
+    ])
     
     uploadProgress.value = 100
     uploadProgressText.value = '上传完成!'
