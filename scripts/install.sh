@@ -111,6 +111,21 @@ check_and_free_port() {
     fi
 }
 
+# 运行命令并显示实时输出
+run_with_output() {
+    local cmd="$1"
+    local prefix="${2:-  }"
+    
+    # 使用 stdbuf 或直接执行，实时显示输出
+    eval "$cmd" 2>&1 | while IFS= read -r line; do
+        # 过滤空行和无用信息
+        if [ -n "$line" ] && [[ ! "$line" =~ ^(Reading|Building|Processing) ]]; then
+            echo -e "${prefix}${CYAN}>${NC} $line"
+        fi
+    done
+    return ${PIPESTATUS[0]}
+}
+
 # 检查依赖
 check_dependencies() {
     log_step "检查必要依赖..."
@@ -124,25 +139,46 @@ check_dependencies() {
     done
     
     if [ ${#missing[@]} -eq 0 ]; then
-        log_success "依赖检查通过"
+        log_success "依赖检查通过 (curl, tar 已安装)"
         return 0
     fi
     
-    log_info "缺少依赖: ${missing[*]}，正在安装..."
+    log_warn "缺少依赖: ${missing[*]}"
+    log_info "正在安装缺失的依赖..."
+    echo ""
+    
+    local install_cmd=""
+    local pkg_manager=""
     
     if command -v apt-get &>/dev/null; then
-        apt-get install -y "${missing[@]}" 2>&1 | grep -v "^$" | tail -5
+        pkg_manager="apt-get"
+        install_cmd="DEBIAN_FRONTEND=noninteractive apt-get install -y ${missing[*]}"
     elif command -v yum &>/dev/null; then
-        yum install -y "${missing[@]}" 2>&1 | grep -v "^$" | tail -5
+        pkg_manager="yum"
+        install_cmd="yum install -y ${missing[*]}"
     elif command -v dnf &>/dev/null; then
-        dnf install -y "${missing[@]}" 2>&1 | grep -v "^$" | tail -5
+        pkg_manager="dnf"
+        install_cmd="dnf install -y ${missing[*]}"
     elif command -v apk &>/dev/null; then
-        apk add --no-cache "${missing[@]}" 2>&1 | grep -v "^$" | tail -5
+        pkg_manager="apk"
+        install_cmd="apk add --no-cache ${missing[*]}"
+    elif command -v pacman &>/dev/null; then
+        pkg_manager="pacman"
+        install_cmd="pacman -S --noconfirm ${missing[*]}"
     else
         log_error "无法安装依赖，请手动安装: ${missing[*]}"
         exit 1
     fi
     
+    log_info "使用 ${pkg_manager} 安装..."
+    
+    # 实时显示安装输出
+    if ! run_with_output "$install_cmd"; then
+        log_error "依赖安装失败"
+        exit 1
+    fi
+    
+    echo ""
     log_success "依赖安装完成"
 }
 
@@ -184,22 +220,36 @@ download_binary() {
     local url="https://github.com/${GITHUB_REPO}/releases/download/${version}/${filename}"
     
     log_step "下载 ServerHub Agent ${version}..."
-    log_info "下载地址: ${url}"
+    log_info "文件: ${filename}"
     
     local tmp_dir=$(mktemp -d)
     trap "rm -rf ${tmp_dir}" EXIT
     
-    # 使用 curl 显示进度
     echo ""
-    if ! curl -fL --progress-bar -o "${tmp_dir}/${filename}" "${url}"; then
-        log_error "下载失败: ${url}"
-        log_info "请检查版本号是否正确，或网络是否可用"
+    echo -e "  ${CYAN}下载地址:${NC} ${url}"
+    echo ""
+    
+    # 使用 curl 显示进度条
+    if ! curl -fL --progress-bar -o "${tmp_dir}/${filename}" "${url}" 2>&1; then
+        echo ""
+        log_error "下载失败"
+        log_info "可能的原因:"
+        echo -e "  ${CYAN}>${NC} 版本 ${version} 不存在"
+        echo -e "  ${CYAN}>${NC} 网络连接问题"
+        echo -e "  ${CYAN}>${NC} GitHub 访问受限"
+        echo ""
+        log_info "尝试手动下载:"
+        echo -e "  ${CYAN}>${NC} wget ${url}"
         exit 1
     fi
     echo ""
     
     log_info "解压文件..."
-    tar -xzf "${tmp_dir}/${filename}" -C "${tmp_dir}"
+    if ! tar -xzf "${tmp_dir}/${filename}" -C "${tmp_dir}" 2>&1; then
+        log_error "解压失败，文件可能已损坏"
+        exit 1
+    fi
+    log_success "解压完成"
     
     log_info "安装到 ${INSTALL_DIR}..."
     mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/"
