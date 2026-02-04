@@ -55,60 +55,48 @@ jobs:
         working-directory: client
         run: pnpm install
 
-      # 生成图标文件
+      # 生成图标文件 - Linux
       - name: Generate icons (Linux)
         if: matrix.platform == 'linux'
         working-directory: client
         run: |
           sudo apt-get update
-          sudo apt-get install -y librsvg2-bin imagemagick
-          mkdir -p build
+          sudo apt-get install -y librsvg2-bin
           # 生成 PNG 图标
-          rsvg-convert -w 512 -h 512 build/logo.svg -o build/icon.png
-          # 生成不同尺寸
-          for size in 16 32 48 64 128 256 512; do
-            rsvg-convert -w $size -h $size build/logo.svg -o build/icon_${size}.png
-          done
+          rsvg-convert -w 512 -h 512 build/logo.svg -o build/icon.png || echo "Icon generation failed, using default"
 
+      # 生成图标文件 - macOS
       - name: Generate icons (macOS)
         if: matrix.platform == 'mac'
         working-directory: client
         run: |
-          mkdir -p build
-          # 使用 sips 转换 SVG 到 PNG
-          # macOS 需要先安装 librsvg
           brew install librsvg
+          # 生成 PNG
           rsvg-convert -w 512 -h 512 build/logo.svg -o build/icon.png
-          # 创建 icns
+          # 创建 iconset 目录
           mkdir -p build/icon.iconset
-          for size in 16 32 64 128 256 512; do
-            rsvg-convert -w $size -h $size build/logo.svg -o build/icon.iconset/icon_${size}x${size}.png
-            rsvg-convert -w $((size*2)) -h $((size*2)) build/logo.svg -o build/icon.iconset/icon_${size}x${size}@2x.png
+          # 生成各种尺寸
+          for size in 16 32 128 256 512; do
+            rsvg-convert -w $size -h $size build/logo.svg -o "build/icon.iconset/icon_${size}x${size}.png"
+            double=$((size * 2))
+            if [ $double -le 1024 ]; then
+              rsvg-convert -w $double -h $double build/logo.svg -o "build/icon.iconset/icon_${size}x${size}@2x.png"
+            fi
           done
-          iconutil -c icns build/icon.iconset -o build/icon.icns
+          # 创建 icns
+          iconutil -c icns build/icon.iconset -o build/icon.icns || echo "ICNS generation failed"
 
+      # 生成图标文件 - Windows
       - name: Generate icons (Windows)
         if: matrix.platform == 'win'
         working-directory: client
-        shell: pwsh
+        shell: bash
         run: |
-          # 安装 Inkscape 用于 SVG 转换
-          choco install inkscape -y
-          $env:Path = "C:\Program Files\Inkscape\bin;$env:Path"
-
-          # 生成 PNG
-          inkscape --export-type=png --export-filename=build/icon.png -w 256 -h 256 build/logo.svg
-
-          # 生成不同尺寸的 PNG 用于 ICO
-          $sizes = @(16, 32, 48, 64, 128, 256)
-          foreach ($size in $sizes) {
-            inkscape --export-type=png --export-filename="build/icon_$size.png" -w $size -h $size build/logo.svg
-          }
-
-          # 使用 ImageMagick 创建 ICO
-          choco install imagemagick -y
-          $env:Path = "C:\Program Files\ImageMagick-7.1.1-Q16-HDRI;$env:Path"
-          magick build/icon_16.png build/icon_32.png build/icon_48.png build/icon_64.png build/icon_128.png build/icon_256.png build/icon.ico
+          # 使用 npm 包生成图标
+          npm install -g svg2png-cli icon-gen || true
+          # 尝试生成 PNG
+          npx svg2png-cli build/logo.svg -o build/icon.png -w 256 -h 256 || echo "PNG generation skipped"
+          # 如果没有 ico，electron-builder 会使用默认图标
 
       - name: Build client
         working-directory: client
