@@ -63,6 +63,10 @@ export const useServerStore = defineStore('server', () => {
     return grouped
   })
 
+  // 单服务器模式检测
+  const isSingleServerMode = computed(() => servers.value.length <= 1)
+  const hasMultipleServers = computed(() => servers.value.length > 1)
+
   function addServer(server: Omit<Server, 'id' | 'status'>) {
     const id = `server_${Date.now()}`
     servers.value.push({
@@ -203,6 +207,8 @@ export const useServerStore = defineStore('server', () => {
     connectedServers,
     serversByGroup,
     groups,
+    isSingleServerMode,
+    hasMultipleServers,
     addServer,
     updateServer,
     removeServer,

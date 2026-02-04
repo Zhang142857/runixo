@@ -9,28 +9,16 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '仪表盘', icon: 'Monitor' }
   },
   {
-    path: '/servers',
-    name: 'Servers',
-    component: () => import('../views/Servers.vue'),
-    meta: { title: '服务器管理', icon: 'Server' }
+    path: '/websites',
+    name: 'Websites',
+    component: () => import('../views/Websites.vue'),
+    meta: { title: '网站管理', icon: 'Globe' }
   },
   {
-    path: '/server/:id',
-    name: 'ServerDetail',
-    component: () => import('../views/ServerDetail.vue'),
-    meta: { title: '服务器详情', hidden: true }
-  },
-  {
-    path: '/containers',
-    name: 'Containers',
-    component: () => import('../views/Containers.vue'),
-    meta: { title: '容器管理', icon: 'Box' }
-  },
-  {
-    path: '/compose',
-    name: 'Compose',
-    component: () => import('../views/Compose.vue'),
-    meta: { title: 'Compose 项目', icon: 'Files' }
+    path: '/docker',
+    name: 'Docker',
+    component: () => import('../views/Docker.vue'),
+    meta: { title: 'Docker 管理', icon: 'Box' }
   },
   {
     path: '/files/:serverId?',
@@ -57,34 +45,37 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '进程管理', icon: 'Cpu' }
   },
   {
-    path: '/cron',
-    name: 'CronJobs',
-    component: () => import('../views/CronJobs.vue'),
-    meta: { title: '定时任务', icon: 'Timer' }
-  },
-  {
-    path: '/firewall',
-    name: 'Firewall',
-    component: () => import('../views/Firewall.vue'),
-    meta: { title: '防火墙', icon: 'Shield' }
-  },
-  {
-    path: '/nginx',
-    name: 'Nginx',
-    component: () => import('../views/Nginx.vue'),
-    meta: { title: 'Nginx', icon: 'Connection' }
-  },
-  {
-    path: '/websites',
-    name: 'Websites',
-    component: () => import('../views/Websites.vue'),
-    meta: { title: '网站管理', icon: 'Globe' }
-  },
-  {
     path: '/environment',
     name: 'Environment',
     component: () => import('../views/Environment.vue'),
     meta: { title: '环境管理', icon: 'Box' }
+  },
+  {
+    path: '/monitor',
+    name: 'Monitor',
+    component: () => import('../views/Monitor.vue'),
+    meta: { title: '监控中心', icon: 'DataLine' }
+  },
+  {
+    path: '/servers',
+    name: 'Servers',
+    component: () => import('../views/Servers.vue'),
+    meta: { title: '服务器管理', icon: 'Server' }
+  },
+  {
+    path: '/server/:id',
+    name: 'ServerDetail',
+    component: () => import('../views/ServerDetail.vue'),
+    meta: { title: '服务器详情', hidden: true }
+  },
+  // 保留旧路由兼容
+  {
+    path: '/containers',
+    redirect: '/docker'
+  },
+  {
+    path: '/compose',
+    redirect: '/docker'
   },
   {
     path: '/database',

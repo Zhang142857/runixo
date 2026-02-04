@@ -2,6 +2,8 @@ package collector
 
 import (
 	"runtime"
+	"sync"
+	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -13,11 +15,74 @@ import (
 )
 
 // Collector 系统信息采集器
-type Collector struct{}
+type Collector struct {
+	mu sync.Mutex
+	// 上次采集的网络数据，用于计算速率
+	lastNetworkStats map[string]*NetworkStat
+	lastNetworkTime  time.Time
+	// 上次采集的磁盘数据
+	lastDiskStats map[string]*DiskStat
+	lastDiskTime  time.Time
+}
+
+// NetworkStat 网络统计
+type NetworkStat struct {
+	BytesSent   uint64
+	BytesRecv   uint64
+	PacketsSent uint64
+	PacketsRecv uint64
+}
+
+// DiskStat 磁盘统计
+type DiskStat struct {
+	ReadBytes  uint64
+	WriteBytes uint64
+	ReadCount  uint64
+	WriteCount uint64
+}
 
 // New 创建采集器
 func New() *Collector {
-	return &Collector{}
+	c := &Collector{
+		lastNetworkStats: make(map[string]*NetworkStat),
+		lastDiskStats:    make(map[string]*DiskStat),
+	}
+	// 预热 CPU 采集，第一次调用会返回 0
+	cpu.Percent(time.Millisecond*100, false)
+	// 初始化网络和磁盘基准数据
+	c.initBaselineStats()
+	return c
+}
+
+// initBaselineStats 初始化基准统计数据
+func (c *Collector) initBaselineStats() {
+	// 网络基准
+	netIO, err := net.IOCounters(true)
+	if err == nil {
+		for _, io := range netIO {
+			c.lastNetworkStats[io.Name] = &NetworkStat{
+				BytesSent:   io.BytesSent,
+				BytesRecv:   io.BytesRecv,
+				PacketsSent: io.PacketsSent,
+				PacketsRecv: io.PacketsRecv,
+			}
+		}
+		c.lastNetworkTime = time.Now()
+	}
+
+	// 磁盘基准
+	diskIO, err := disk.IOCounters()
+	if err == nil {
+		for name, io := range diskIO {
+			c.lastDiskStats[name] = &DiskStat{
+				ReadBytes:  io.ReadBytes,
+				WriteBytes: io.WriteBytes,
+				ReadCount:  io.ReadCount,
+				WriteCount: io.WriteCount,
+			}
+		}
+		c.lastDiskTime = time.Now()
+	}
 }
 
 // SystemInfo 系统信息
@@ -44,6 +109,7 @@ type CpuInfo struct {
 	Threads      int32
 	Frequency    float64
 	UsagePerCore []float64
+	Usage        float64 // 总体使用率
 }
 
 // MemoryInfo 内存信息
@@ -97,20 +163,20 @@ type Metrics struct {
 	Load15         float64
 }
 
-// DiskMetric 磁盘指标
+// DiskMetric 磁盘指标（速率，字节/秒）
 type DiskMetric struct {
 	Device     string
-	ReadBytes  uint64
-	WriteBytes uint64
+	ReadBytes  uint64 // 读取速率 bytes/s
+	WriteBytes uint64 // 写入速率 bytes/s
 	ReadCount  uint64
 	WriteCount uint64
 }
 
-// NetworkMetric 网络指标
+// NetworkMetric 网络指标（速率，字节/秒）
 type NetworkMetric struct {
 	Interface   string
-	BytesSent   uint64
-	BytesRecv   uint64
+	BytesSent   uint64 // 发送速率 bytes/s
+	BytesRecv   uint64 // 接收速率 bytes/s
 	PacketsSent uint64
 	PacketsRecv uint64
 }
@@ -190,11 +256,18 @@ func (c *Collector) getCpuInfo() (*CpuInfo, error) {
 		info.Frequency = cpuInfos[0].Mhz
 	}
 
-	// CPU 使用率 - 使用 0 间隔获取即时值，不阻塞
-	// 第一次调用可能返回 0，但后续调用会返回正确值
-	percentages, err := cpu.Percent(0, true)
+	// CPU 使用率 - 使用短间隔获取更准确的值
+	percentages, err := cpu.Percent(time.Millisecond*200, true)
 	if err == nil {
 		info.UsagePerCore = percentages
+		// 计算总体使用率
+		var total float64
+		for _, p := range percentages {
+			total += p
+		}
+		if len(percentages) > 0 {
+			info.Usage = total / float64(len(percentages))
+		}
 	}
 
 	return info, nil
@@ -286,14 +359,29 @@ func (c *Collector) getNetworkInfo() ([]*NetworkInfo, error) {
 	return networks, nil
 }
 
-// GetMetrics 获取监控指标
+// GetMetrics 获取监控指标（返回速率而非累计值）
 func (c *Collector) GetMetrics() (*Metrics, error) {
-	metrics := &Metrics{}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	// CPU 使用率
-	cpuPercent, err := cpu.Percent(0, false)
+	metrics := &Metrics{}
+	now := time.Now()
+
+	// CPU 使用率 - 使用 200ms 间隔获取准确值
+	// 注意：cpu.Percent 需要一个时间间隔来计算差值
+	cpuPercent, err := cpu.Percent(time.Millisecond*200, false)
 	if err == nil && len(cpuPercent) > 0 {
 		metrics.CpuUsage = cpuPercent[0]
+	} else {
+		// 备用方案：获取每个核心的使用率然后平均
+		perCore, err := cpu.Percent(time.Millisecond*200, true)
+		if err == nil && len(perCore) > 0 {
+			var total float64
+			for _, p := range perCore {
+				total += p
+			}
+			metrics.CpuUsage = total / float64(len(perCore))
+		}
 	}
 
 	// 内存使用率
@@ -310,32 +398,58 @@ func (c *Collector) GetMetrics() (*Metrics, error) {
 		metrics.Load15 = loadAvg.Load15
 	}
 
-	// 磁盘 IO
+	// 磁盘 IO（计算速率）
 	diskIO, err := disk.IOCounters()
 	if err == nil {
-		for name, io := range diskIO {
-			metrics.DiskMetrics = append(metrics.DiskMetrics, &DiskMetric{
-				Device:     name,
-				ReadBytes:  io.ReadBytes,
-				WriteBytes: io.WriteBytes,
-				ReadCount:  io.ReadCount,
-				WriteCount: io.WriteCount,
-			})
+		elapsed := now.Sub(c.lastDiskTime).Seconds()
+		if elapsed > 0 {
+			for name, io := range diskIO {
+				dm := &DiskMetric{Device: name}
+				if last, ok := c.lastDiskStats[name]; ok {
+					// 计算速率 bytes/s
+					dm.ReadBytes = uint64(float64(io.ReadBytes-last.ReadBytes) / elapsed)
+					dm.WriteBytes = uint64(float64(io.WriteBytes-last.WriteBytes) / elapsed)
+					dm.ReadCount = uint64(float64(io.ReadCount-last.ReadCount) / elapsed)
+					dm.WriteCount = uint64(float64(io.WriteCount-last.WriteCount) / elapsed)
+				}
+				metrics.DiskMetrics = append(metrics.DiskMetrics, dm)
+				// 更新上次数据
+				c.lastDiskStats[name] = &DiskStat{
+					ReadBytes:  io.ReadBytes,
+					WriteBytes: io.WriteBytes,
+					ReadCount:  io.ReadCount,
+					WriteCount: io.WriteCount,
+				}
+			}
 		}
+		c.lastDiskTime = now
 	}
 
-	// 网络 IO
+	// 网络 IO（计算速率）
 	netIO, err := net.IOCounters(true)
 	if err == nil {
-		for _, io := range netIO {
-			metrics.NetworkMetrics = append(metrics.NetworkMetrics, &NetworkMetric{
-				Interface:   io.Name,
-				BytesSent:   io.BytesSent,
-				BytesRecv:   io.BytesRecv,
-				PacketsSent: io.PacketsSent,
-				PacketsRecv: io.PacketsRecv,
-			})
+		elapsed := now.Sub(c.lastNetworkTime).Seconds()
+		if elapsed > 0 {
+			for _, io := range netIO {
+				nm := &NetworkMetric{Interface: io.Name}
+				if last, ok := c.lastNetworkStats[io.Name]; ok {
+					// 计算速率 bytes/s
+					nm.BytesSent = uint64(float64(io.BytesSent-last.BytesSent) / elapsed)
+					nm.BytesRecv = uint64(float64(io.BytesRecv-last.BytesRecv) / elapsed)
+					nm.PacketsSent = uint64(float64(io.PacketsSent-last.PacketsSent) / elapsed)
+					nm.PacketsRecv = uint64(float64(io.PacketsRecv-last.PacketsRecv) / elapsed)
+				}
+				metrics.NetworkMetrics = append(metrics.NetworkMetrics, nm)
+				// 更新上次数据
+				c.lastNetworkStats[io.Name] = &NetworkStat{
+					BytesSent:   io.BytesSent,
+					BytesRecv:   io.BytesRecv,
+					PacketsSent: io.PacketsSent,
+					PacketsRecv: io.PacketsRecv,
+				}
+			}
 		}
+		c.lastNetworkTime = now
 	}
 
 	return metrics, nil

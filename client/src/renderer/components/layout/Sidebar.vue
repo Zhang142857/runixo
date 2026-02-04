@@ -3,7 +3,7 @@
     <div class="sidebar-header">
       <div class="logo">
         <div class="logo-icon">
-          <svg viewBox="0 0 512 512" width="32" height="32">
+          <svg viewBox="0 0 512 512" width="28" height="28">
             <defs>
               <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" style="stop-color:#667eea" />
@@ -22,10 +22,6 @@
               <circle cx="160" cy="310" r="10" fill="#f5576c"/>
               <circle cx="190" cy="310" r="10" fill="#4ade80"/>
             </g>
-            <g fill="#fbbf24">
-              <path d="M380 360 L390 380 L380 400 L370 380 Z"/>
-              <path d="M400 340 L408 355 L400 370 L392 355 Z" opacity="0.7"/>
-            </g>
           </svg>
         </div>
         <span class="logo-text">ServerHub</span>
@@ -33,21 +29,19 @@
     </div>
 
     <div class="sidebar-content">
-      <el-menu
-        :default-active="currentRoute"
-        router
-      >
+      <el-menu :default-active="currentRoute" router>
+        <!-- 核心功能 -->
         <el-menu-item index="/">
           <el-icon><Odometer /></el-icon>
           <span>仪表盘</span>
         </el-menu-item>
-        <el-menu-item index="/servers">
-          <el-icon><Monitor /></el-icon>
-          <span>服务器管理</span>
+        <el-menu-item index="/websites">
+          <el-icon><Link /></el-icon>
+          <span>网站管理</span>
         </el-menu-item>
-        <el-menu-item index="/containers">
+        <el-menu-item index="/docker">
           <el-icon><Box /></el-icon>
-          <span>容器管理</span>
+          <span>Docker 管理</span>
         </el-menu-item>
         <el-menu-item index="/files">
           <el-icon><Folder /></el-icon>
@@ -57,6 +51,10 @@
           <el-icon><Monitor /></el-icon>
           <span>终端</span>
         </el-menu-item>
+
+        <el-divider />
+
+        <!-- 系统管理 -->
         <el-menu-item index="/services">
           <el-icon><Setting /></el-icon>
           <span>服务管理</span>
@@ -65,26 +63,28 @@
           <el-icon><Cpu /></el-icon>
           <span>进程管理</span>
         </el-menu-item>
-        <el-menu-item index="/compose">
-          <el-icon><Files /></el-icon>
-          <span>Compose</span>
-        </el-menu-item>
-        <el-menu-item index="/websites">
-          <el-icon><Monitor /></el-icon>
-          <span>网站管理</span>
-        </el-menu-item>
         <el-menu-item index="/environment">
-          <el-icon><Box /></el-icon>
+          <el-icon><Coin /></el-icon>
           <span>环境管理</span>
+        </el-menu-item>
+        <el-menu-item index="/monitor">
+          <el-icon><DataLine /></el-icon>
+          <span>监控中心</span>
+        </el-menu-item>
+
+        <!-- 多服务器模式才显示 -->
+        <el-menu-item v-if="hasMultipleServers" index="/servers">
+          <el-icon><DataBoard /></el-icon>
+          <span>服务器管理</span>
         </el-menu-item>
 
         <el-divider />
 
+        <!-- 扩展功能 -->
         <el-menu-item index="/ai">
           <el-icon><ChatDotRound /></el-icon>
           <span>AI 助手</span>
         </el-menu-item>
-
         <el-menu-item index="/cloud">
           <el-icon><Cloudy /></el-icon>
           <span>云服务</span>
@@ -95,8 +95,8 @@
         </el-menu-item>
       </el-menu>
 
-      <!-- 已连接服务器列表 -->
-      <div class="connected-servers" v-if="connectedServers.length > 0">
+      <!-- 已连接服务器列表 - 多服务器模式才显示 -->
+      <div class="connected-servers" v-if="hasMultipleServers && connectedServers.length > 0">
         <div class="section-title">已连接服务器</div>
         <div
           v-for="server in connectedServers"
@@ -135,8 +135,11 @@ import {
   Cloudy,
   Grid,
   Cpu,
-  Files,
-  ChatDotRound
+  ChatDotRound,
+  Link,
+  Coin,
+  DataBoard,
+  DataLine
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -146,6 +149,7 @@ const serverStore = useServerStore()
 const currentRoute = computed(() => route.path)
 const connectedServers = computed(() => serverStore.connectedServers)
 const currentServerId = computed(() => serverStore.currentServerId)
+const hasMultipleServers = computed(() => serverStore.hasMultipleServers)
 
 function selectServer(id: string) {
   serverStore.setCurrentServer(id)

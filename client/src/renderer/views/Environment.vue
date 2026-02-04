@@ -263,14 +263,18 @@ async function installEnv(env: EnvItem) {
   showInstallLog.value = true
 
   try {
+    // 执行安装命令（10分钟超时）
     const result = await window.electronAPI.server.executeCommand(
       server.id,
       'bash',
       ['-c', env.installCmd],
-      { timeout: 600 }  // 10 分钟超时
+      { timeout: 600 }
     )
 
-    installLog.value += result.stdout || ''
+    // 显示输出
+    if (result.stdout) {
+      installLog.value += result.stdout
+    }
     if (result.stderr) {
       installLog.value += '\n' + result.stderr
     }

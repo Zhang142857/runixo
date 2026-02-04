@@ -77,6 +77,12 @@ func (s *AgentServer) GetMetrics(req *pb.MetricsRequest, stream pb.AgentService_
 			}
 			pbMetrics := convertMetrics(metrics)
 			pbMetrics.Timestamp = time.Now().Unix()
+			// 调试日志
+			log.Debug().
+				Float64("cpu_usage", pbMetrics.CpuUsage).
+				Float64("memory_usage", pbMetrics.MemoryUsage).
+				Int("network_metrics_count", len(pbMetrics.NetworkMetrics)).
+				Msg("发送指标数据")
 			if err := stream.Send(pbMetrics); err != nil {
 				return err
 			}
