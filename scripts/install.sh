@@ -116,14 +116,19 @@ install_dependencies() {
     log_step "安装必要依赖..."
     
     if command -v apt-get &>/dev/null; then
-        apt-get update -qq
-        apt-get install -y -qq curl tar openssl lsof >/dev/null 2>&1
+        log_info "更新软件包列表..."
+        apt-get update -qq 2>&1 | while read line; do echo -e "  ${CYAN}>${NC} $line"; done
+        log_info "安装 curl tar openssl lsof..."
+        apt-get install -y curl tar openssl lsof 2>&1 | grep -E "^(Setting up|Unpacking|is already)" | while read line; do echo -e "  ${CYAN}>${NC} $line"; done
     elif command -v yum &>/dev/null; then
-        yum install -y -q curl tar openssl lsof >/dev/null 2>&1
+        log_info "安装依赖包..."
+        yum install -y curl tar openssl lsof 2>&1 | grep -E "^(Installing|Already)" | while read line; do echo -e "  ${CYAN}>${NC} $line"; done
     elif command -v dnf &>/dev/null; then
-        dnf install -y -q curl tar openssl lsof >/dev/null 2>&1
+        log_info "安装依赖包..."
+        dnf install -y curl tar openssl lsof 2>&1 | grep -E "^(Installing|Already)" | while read line; do echo -e "  ${CYAN}>${NC} $line"; done
     elif command -v apk &>/dev/null; then
-        apk add --no-cache curl tar openssl lsof >/dev/null 2>&1
+        log_info "安装依赖包..."
+        apk add --no-cache curl tar openssl lsof 2>&1 | while read line; do echo -e "  ${CYAN}>${NC} $line"; done
     fi
     
     log_success "依赖安装完成"
@@ -167,20 +172,35 @@ download_binary() {
     local url="https://github.com/${GITHUB_REPO}/releases/download/${version}/${filename}"
     
     log_step "下载 ServerHub Agent ${version}..."
+    log_info "下载地址: ${url}"
     
     local tmp_dir=$(mktemp -d)
     trap "rm -rf ${tmp_dir}" EXIT
     
-    if ! curl -fsSL -o "${tmp_dir}/${filename}" "${url}"; then
+    # 使用 curl 显示进度
+    echo ""
+    if ! curl -fL --progress-bar -o "${tmp_dir}/${filename}" "${url}"; then
         log_error "下载失败: ${url}"
+        log_info "请检查版本号是否正确，或网络是否可用"
         exit 1
     fi
+    echo ""
     
+    log_info "解压文件..."
     tar -xzf "${tmp_dir}/${filename}" -C "${tmp_dir}"
+    
+    log_info "安装到 ${INSTALL_DIR}..."
     mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/"
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     
-    log_success "Agent 安装完成"
+    # 验证安装
+    if [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
+        local installed_version=$(${INSTALL_DIR}/${BINARY_NAME} --version 2>&1 | head -1)
+        log_success "Agent 安装完成: ${installed_version}"
+    else
+        log_error "安装验证失败"
+        exit 1
+    fi
 }
 
 # 生成令牌
@@ -516,15 +536,37 @@ EOFCLI
 # 启动服务
 start_service() {
     log_step "启动服务..."
+    
+    log_info "设置开机自启..."
     systemctl enable serverhub-agent >/dev/null 2>&1
+    
+    log_info "启动 serverhub-agent..."
     systemctl start serverhub-agent
-    sleep 2
+    
+    # 等待服务启动
+    local count=0
+    while [ $count -lt 5 ]; do
+        if systemctl is-active --quiet serverhub-agent; then
+            break
+        fi
+        sleep 1
+        count=$((count + 1))
+        echo -e "  ${CYAN}>${NC} 等待服务启动... ($count/5)"
+    done
     
     if systemctl is-active --quiet serverhub-agent; then
         log_success "服务已启动"
+        
+        # 显示监听端口
+        local listen_info=$(ss -tlnp 2>/dev/null | grep serverhub || netstat -tlnp 2>/dev/null | grep serverhub)
+        if [ -n "$listen_info" ]; then
+            log_info "监听端口:"
+            echo "$listen_info" | while read line; do echo -e "  ${CYAN}>${NC} $line"; done
+        fi
     else
         log_error "服务启动失败"
-        journalctl -u serverhub-agent -n 20 --no-pager
+        log_info "查看错误日志:"
+        journalctl -u serverhub-agent -n 20 --no-pager 2>&1 | while read line; do echo -e "  ${RED}>${NC} $line"; done
         exit 1
     fi
 }
