@@ -459,8 +459,11 @@ func (c *Collector) GetMetrics() (*Metrics, error) {
 	metrics := &Metrics{}
 	now := time.Now()
 
-	// CPU 使用率 - 使用直接读取 /proc/stat 的方式
-	metrics.CpuUsage = c.calculateCpuUsage()
+	// CPU 使用率 - 使用 500ms 采样间隔
+	cpuPercent, err := cpu.Percent(time.Millisecond*500, false)
+	if err == nil && len(cpuPercent) > 0 {
+		metrics.CpuUsage = cpuPercent[0]
+	}
 
 	// 内存使用率
 	vmem, err := mem.VirtualMemory()

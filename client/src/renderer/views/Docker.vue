@@ -53,6 +53,11 @@
             <span class="tab-label">Compose <el-badge :value="composeProjects.length" :max="99" type="info" /></span>
           </template>
         </el-tab-pane>
+        <el-tab-pane name="hub">
+          <template #label>
+            <span class="tab-label"><el-icon><Shop /></el-icon> 应用商店</span>
+          </template>
+        </el-tab-pane>
       </el-tabs>
 
       <!-- 容器标签页 -->
@@ -225,6 +230,60 @@
           </el-table-column>
         </el-table>
       </div>
+
+      <!-- 应用商店标签页 -->
+      <div v-show="activeTab === 'hub'" class="tab-content">
+        <div class="toolbar">
+          <el-input v-model="hubSearch" placeholder="搜索 Docker Hub 镜像..." size="small" clearable style="width: 300px"
+            @keyup.enter="searchDockerHub">
+            <template #prefix><el-icon><Search /></el-icon></template>
+          </el-input>
+          <el-button type="primary" size="small" @click="searchDockerHub" :loading="hubSearching">搜索</el-button>
+        </div>
+
+        <!-- 热门应用 -->
+        <div v-if="!hubSearchResults.length && !hubSearching" class="popular-apps">
+          <h3>热门应用 - 一键部署</h3>
+          <div class="app-grid">
+            <div v-for="app in popularApps" :key="app.name" class="app-card" @click="showDeployDialog(app)">
+              <div class="app-icon">{{ app.icon }}</div>
+              <div class="app-info">
+                <div class="app-name">{{ app.name }}</div>
+                <div class="app-desc">{{ app.description }}</div>
+              </div>
+              <el-button type="primary" size="small" class="deploy-btn">部署</el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 搜索结果 -->
+        <div v-if="hubSearchResults.length || hubSearching" class="search-results">
+          <el-table :data="hubSearchResults" v-loading="hubSearching" size="small" class="data-table">
+            <el-table-column prop="name" label="镜像名称" min-width="200">
+              <template #default="{ row }">
+                <div class="hub-name">
+                  <el-icon v-if="row.is_official" color="#3b82f6"><CircleCheck /></el-icon>
+                  <span>{{ row.name }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="description" label="描述" min-width="300" show-overflow-tooltip />
+            <el-table-column prop="star_count" label="Stars" width="100">
+              <template #default="{ row }">
+                <span>⭐ {{ formatStars(row.star_count) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right">
+              <template #default="{ row }">
+                <el-button-group size="small">
+                  <el-button type="primary" @click="quickDeploy(row)">部署</el-button>
+                  <el-button @click="pullHubImage(row.name)">拉取</el-button>
+                </el-button-group>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
     </template>
 
     <!-- 日志对话框 -->
@@ -320,6 +379,39 @@
         <el-button type="primary" size="small" @click="createVolume">创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- 一键部署对话框 -->
+    <el-dialog v-model="showDeploy" :title="`部署 ${deployApp?.name || ''}`" width="500px" class="dark-dialog">
+      <el-form :model="deployConfig" label-width="100px" size="small">
+        <el-form-item label="容器名称" required>
+          <el-input v-model="deployConfig.name" :placeholder="deployApp?.defaultName || 'my-app'" />
+        </el-form-item>
+        <el-form-item label="镜像版本">
+          <el-select v-model="deployConfig.tag" style="width: 100%">
+            <el-option value="latest" label="latest (最新)" />
+            <el-option v-for="tag in deployApp?.tags || []" :key="tag" :value="tag" :label="tag" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-for="port in deployApp?.ports || []" :key="port.container" :label="`端口 ${port.container}`">
+          <el-input v-model="deployConfig.ports[port.container]" :placeholder="String(port.host)">
+            <template #prepend>主机端口</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item v-for="env in deployApp?.envs || []" :key="env.name" :label="env.label">
+          <el-input v-model="deployConfig.envs[env.name]" :placeholder="env.default" :type="env.secret ? 'password' : 'text'" />
+        </el-form-item>
+        <el-form-item v-for="vol in deployApp?.volumes || []" :key="vol.container" :label="vol.label">
+          <el-input v-model="deployConfig.volumes[vol.container]" :placeholder="vol.host" />
+        </el-form-item>
+        <el-form-item label="自动重启">
+          <el-switch v-model="deployConfig.restart" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button size="small" @click="showDeploy = false">取消</el-button>
+        <el-button type="primary" size="small" @click="executeDeploy" :loading="deploying">部署</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -328,7 +420,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useServerStore } from '@/stores/server'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Refresh, Search, Shop, CircleCheck } from '@element-plus/icons-vue'
 
 interface Container {
   id: string
@@ -408,6 +500,113 @@ const pullImageName = ref('')
 const pullOutput = ref('')
 const pulling = ref(false)
 const creating = ref(false)
+
+// Docker Hub 搜索
+const hubSearch = ref('')
+const hubSearching = ref(false)
+const hubSearchResults = ref<any[]>([])
+
+// 一键部署
+const showDeploy = ref(false)
+const deploying = ref(false)
+const deployApp = ref<any>(null)
+const deployConfig = ref<any>({ name: '', tag: 'latest', ports: {}, envs: {}, volumes: {}, restart: true })
+
+// 热门应用配置
+const popularApps = [
+  {
+    name: 'Nginx',
+    icon: '🌐',
+    description: '高性能 Web 服务器',
+    image: 'nginx',
+    defaultName: 'nginx',
+    tags: ['latest', 'alpine', '1.25', '1.24'],
+    ports: [{ container: 80, host: 80 }],
+    envs: [],
+    volumes: [{ container: '/usr/share/nginx/html', host: '/var/www/html', label: '网站目录' }]
+  },
+  {
+    name: 'MySQL',
+    icon: '🐬',
+    description: '流行的关系型数据库',
+    image: 'mysql',
+    defaultName: 'mysql',
+    tags: ['latest', '8.0', '5.7'],
+    ports: [{ container: 3306, host: 3306 }],
+    envs: [{ name: 'MYSQL_ROOT_PASSWORD', label: 'Root密码', default: '', secret: true }],
+    volumes: [{ container: '/var/lib/mysql', host: '/data/mysql', label: '数据目录' }]
+  },
+  {
+    name: 'Redis',
+    icon: '🔴',
+    description: '高性能键值存储',
+    image: 'redis',
+    defaultName: 'redis',
+    tags: ['latest', 'alpine', '7', '6'],
+    ports: [{ container: 6379, host: 6379 }],
+    envs: [],
+    volumes: [{ container: '/data', host: '/data/redis', label: '数据目录' }]
+  },
+  {
+    name: 'PostgreSQL',
+    icon: '🐘',
+    description: '强大的开源数据库',
+    image: 'postgres',
+    defaultName: 'postgres',
+    tags: ['latest', '16', '15', '14'],
+    ports: [{ container: 5432, host: 5432 }],
+    envs: [{ name: 'POSTGRES_PASSWORD', label: '密码', default: '', secret: true }],
+    volumes: [{ container: '/var/lib/postgresql/data', host: '/data/postgres', label: '数据目录' }]
+  },
+  {
+    name: 'MongoDB',
+    icon: '🍃',
+    description: 'NoSQL 文档数据库',
+    image: 'mongo',
+    defaultName: 'mongo',
+    tags: ['latest', '7', '6', '5'],
+    ports: [{ container: 27017, host: 27017 }],
+    envs: [],
+    volumes: [{ container: '/data/db', host: '/data/mongo', label: '数据目录' }]
+  },
+  {
+    name: 'WordPress',
+    icon: '📝',
+    description: '流行的博客/CMS系统',
+    image: 'wordpress',
+    defaultName: 'wordpress',
+    tags: ['latest', 'php8.2', 'php8.1'],
+    ports: [{ container: 80, host: 8080 }],
+    envs: [
+      { name: 'WORDPRESS_DB_HOST', label: '数据库地址', default: 'mysql:3306' },
+      { name: 'WORDPRESS_DB_USER', label: '数据库用户', default: 'root' },
+      { name: 'WORDPRESS_DB_PASSWORD', label: '数据库密码', default: '', secret: true }
+    ],
+    volumes: []
+  },
+  {
+    name: 'Portainer',
+    icon: '🐳',
+    description: 'Docker 可视化管理',
+    image: 'portainer/portainer-ce',
+    defaultName: 'portainer',
+    tags: ['latest', '2.19.4'],
+    ports: [{ container: 9000, host: 9000 }],
+    envs: [],
+    volumes: [{ container: '/var/run/docker.sock', host: '/var/run/docker.sock', label: 'Docker Socket' }]
+  },
+  {
+    name: 'Adminer',
+    icon: '📊',
+    description: '轻量级数据库管理',
+    image: 'adminer',
+    defaultName: 'adminer',
+    tags: ['latest'],
+    ports: [{ container: 8080, host: 8081 }],
+    envs: [],
+    volumes: []
+  }
+]
 
 const connectedServers = computed(() => serverStore.connectedServers)
 const hasMultipleServers = computed(() => serverStore.hasMultipleServers)
@@ -774,6 +973,124 @@ function getComposeStatusType(status: string): 'success' | 'warning' | 'danger' 
   if (status?.includes('exited') || status?.includes('stopped')) return 'danger'
   return 'info'
 }
+
+// Docker Hub 搜索
+async function searchDockerHub() {
+  if (!hubSearch.value.trim()) return
+  hubSearching.value = true
+  hubSearchResults.value = []
+  try {
+    const response = await fetch(`https://hub.docker.com/v2/search/repositories/?query=${encodeURIComponent(hubSearch.value)}&page_size=20`)
+    const data = await response.json()
+    hubSearchResults.value = data.results || []
+  } catch (e) {
+    ElMessage.error('搜索失败，请检查网络连接')
+  } finally {
+    hubSearching.value = false
+  }
+}
+
+function formatStars(count: number): string {
+  if (count >= 1000000) return (count / 1000000).toFixed(1) + 'M'
+  if (count >= 1000) return (count / 1000).toFixed(1) + 'K'
+  return String(count)
+}
+
+// 一键部署
+function showDeployDialog(app: any) {
+  deployApp.value = app
+  deployConfig.value = {
+    name: app.defaultName,
+    tag: 'latest',
+    ports: {},
+    envs: {},
+    volumes: {},
+    restart: true
+  }
+  // 初始化默认值
+  app.ports?.forEach((p: any) => { deployConfig.value.ports[p.container] = String(p.host) })
+  app.envs?.forEach((e: any) => { deployConfig.value.envs[e.name] = e.default || '' })
+  app.volumes?.forEach((v: any) => { deployConfig.value.volumes[v.container] = v.host })
+  showDeploy.value = true
+}
+
+function quickDeploy(hubImage: any) {
+  // 从 Hub 搜索结果快速部署
+  const app = {
+    name: hubImage.name,
+    image: hubImage.name,
+    defaultName: hubImage.name.split('/').pop()?.replace(/[^a-z0-9]/gi, '-') || 'app',
+    tags: ['latest'],
+    ports: [],
+    envs: [],
+    volumes: []
+  }
+  showDeployDialog(app)
+}
+
+async function executeDeploy() {
+  if (!selectedServer.value || !deployApp.value) return
+  if (!deployConfig.value.name) {
+    ElMessage.warning('请输入容器名称')
+    return
+  }
+  
+  deploying.value = true
+  try {
+    const app = deployApp.value
+    const cfg = deployConfig.value
+    
+    // 构建 docker run 命令
+    let cmd = `docker run -d --name ${cfg.name}`
+    
+    // 端口映射
+    Object.entries(cfg.ports).forEach(([container, host]) => {
+      if (host) cmd += ` -p ${host}:${container}`
+    })
+    
+    // 环境变量
+    Object.entries(cfg.envs).forEach(([name, value]) => {
+      if (value) cmd += ` -e ${name}="${value}"`
+    })
+    
+    // 卷挂载
+    Object.entries(cfg.volumes).forEach(([container, host]) => {
+      if (host) cmd += ` -v ${host}:${container}`
+    })
+    
+    // 重启策略
+    if (cfg.restart) cmd += ' --restart unless-stopped'
+    
+    // 镜像
+    cmd += ` ${app.image}:${cfg.tag}`
+    
+    // 先拉取镜像
+    ElMessage.info('正在拉取镜像...')
+    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `docker pull ${app.image}:${cfg.tag}`])
+    
+    // 创建容器
+    const result = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', cmd])
+    
+    if (result.exit_code === 0) {
+      ElMessage.success(`${app.name} 部署成功！`)
+      showDeploy.value = false
+      activeTab.value = 'containers'
+      loadContainers()
+    } else {
+      ElMessage.error('部署失败: ' + (result.stderr || result.stdout))
+    }
+  } catch (e) {
+    ElMessage.error('部署失败: ' + (e as Error).message)
+  } finally {
+    deploying.value = false
+  }
+}
+
+async function pullHubImage(imageName: string) {
+  pullImageName.value = imageName + ':latest'
+  showPullImage.value = true
+  await pullImage()
+}
 </script>
 
 <style lang="scss" scoped>
@@ -897,5 +1214,83 @@ function getComposeStatusType(status: string): 'success' | 'warning' | 'danger' 
   .el-dialog__title { color: var(--text-color); }
   .el-dialog__body { background: var(--bg-secondary); }
   .el-dialog__footer { background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
+}
+
+// 应用商店样式
+.popular-apps {
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-color);
+  }
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.app-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .app-icon {
+    font-size: 32px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+  }
+
+  .app-info {
+    flex: 1;
+    min-width: 0;
+
+    .app-name {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .app-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .deploy-btn {
+    flex-shrink: 0;
+  }
+}
+
+.hub-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-results {
+  margin-top: 16px;
 }
 </style>

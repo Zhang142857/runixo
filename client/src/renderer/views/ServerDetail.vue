@@ -348,6 +348,9 @@ function getProgressColor(percentage: number): string {
 .server-detail {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 20px;
+  background: var(--bg-color);
+  min-height: 100vh;
 }
 
 .page-header {

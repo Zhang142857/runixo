@@ -275,7 +275,9 @@ async function startMetrics(serverId: string) {
     if (info) {
       const cpu = info.cpu?.usage ?? info.cpu?.usedPercent ?? 0
       const mem = info.memory?.usedPercent ?? info.memory?.used_percent ?? 0
-      const disk = info.disks?.length ? info.disks.reduce((s: number, d: any) => s + (d.used_percent || d.usedPercent || 0), 0) / info.disks.length : 0
+      // 只统计根分区的磁盘占用，忽略 snap/loop 等虚拟挂载
+      const rootDisk = info.disks?.find((d: any) => d.mountpoint === '/')
+      const disk = rootDisk ? (rootDisk.used_percent || rootDisk.usedPercent || 0) : 0
       metrics.value[serverId] = { cpu, memory: mem, disk }
     }
 

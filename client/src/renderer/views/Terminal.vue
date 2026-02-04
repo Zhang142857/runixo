@@ -61,6 +61,14 @@
           <el-icon><Delete /></el-icon>
           清屏
         </el-button>
+        <el-button @click="copySelection" size="small">
+          <el-icon><CopyDocument /></el-icon>
+          复制
+        </el-button>
+        <el-button @click="pasteFromClipboard" size="small">
+          <el-icon><DocumentCopy /></el-icon>
+          粘贴
+        </el-button>
         <el-button @click="reconnect" :disabled="!selectedServer" size="small">
           <el-icon><Refresh /></el-icon>
           重连
@@ -135,13 +143,15 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useServerStore } from '@/stores/server'
+import { ElMessage } from 'element-plus'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
+import { WebglAddon } from 'xterm-addon-webgl'
 import 'xterm/css/xterm.css'
 import {
   Refresh, Plus, Close, Delete, Minus, Brush,
-  Lightning, Connection, Clock
+  Lightning, Connection, Clock, CopyDocument, DocumentCopy
 } from '@element-plus/icons-vue'
 
 interface TerminalTab {
@@ -149,6 +159,7 @@ interface TerminalTab {
   title: string
   terminal: Terminal | null
   fitAddon: FitAddon | null
+  webglAddon: WebglAddon | null
   sessionId: string
   connected: boolean
   cleanupFns: Array<() => void>
@@ -226,6 +237,7 @@ function addTab() {
     title: `终端 ${tabs.value.length + 1}`,
     terminal: null,
     fitAddon: null,
+    webglAddon: null,
     sessionId,
     connected: false,
     cleanupFns: []
@@ -289,7 +301,9 @@ function initTerminal(tab: TerminalTab) {
     lineHeight: 1.2,
     cursorBlink: true,
     cursorStyle: 'bar',
-    scrollback: 10000
+    scrollback: 10000,
+    allowProposedApi: true,
+    rightClickSelectsWord: true
   })
 
   tab.fitAddon = new FitAddon()
@@ -297,6 +311,15 @@ function initTerminal(tab: TerminalTab) {
   tab.terminal.loadAddon(new WebLinksAddon())
 
   tab.terminal.open(terminalContainer.value)
+  
+  // 尝试加载 WebGL 渲染器以提升性能
+  try {
+    tab.webglAddon = new WebglAddon()
+    tab.terminal.loadAddon(tab.webglAddon)
+  } catch (e) {
+    console.warn('WebGL addon failed to load, using canvas renderer')
+  }
+  
   tab.fitAddon.fit()
 
   terminalRows.value = tab.terminal.rows
@@ -476,6 +499,35 @@ function executeHistoryCommand(command: string) {
     // 直接发送命令到 shell（包含回车）
     window.electronAPI.terminal.write(selectedServer.value, activeTab.sessionId, command + '\r')
     showHistory.value = false
+  }
+}
+
+// 复制选中的文本
+async function copySelection() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (activeTab?.terminal) {
+    const selection = activeTab.terminal.getSelection()
+    if (selection) {
+      await navigator.clipboard.writeText(selection)
+      ElMessage.success('已复制到剪贴板')
+    } else {
+      ElMessage.info('请先选择要复制的文本')
+    }
+  }
+}
+
+// 从剪贴板粘贴
+async function pasteFromClipboard() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (activeTab?.connected && selectedServer.value) {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) {
+        window.electronAPI.terminal.write(selectedServer.value, activeTab.sessionId, text)
+      }
+    } catch (e) {
+      ElMessage.error('无法访问剪贴板')
+    }
   }
 }
 

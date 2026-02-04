@@ -47,10 +47,9 @@ importers:
       xterm-addon-web-links:
         specifier: ^0.9.0
         version: 0.9.0(xterm@5.3.0)
-    optionalDependencies:
-      '@rollup/rollup-win32-x64-msvc':
-        specifier: ^4.57.1
-        version: 4.57.1
+      xterm-addon-webgl:
+        specifier: ^0.16.0
+        version: 0.16.0(xterm@5.3.0)
     devDependencies:
       '@playwright/test':
         specifier: ^1.58.1
@@ -2402,6 +2401,12 @@ packages:
   xterm-addon-web-links@0.9.0:
     resolution: {integrity: sha512-LIzi4jBbPlrKMZF3ihoyqayWyTXAwGfu4yprz1aK2p71e9UKXN6RRzVONR0L+Zd+Ik5tPVI9bwp9e8fDTQh49Q==}
     deprecated: This package is now deprecated. Move to @xterm/addon-web-links instead.
+    peerDependencies:
+      xterm: ^5.0.0
+
+  xterm-addon-webgl@0.16.0:
+    resolution: {integrity: sha512-E8cq1AiqNOv0M/FghPT+zPAEnvIQRDbAbkb04rRYSxUym69elPWVJ4sv22FCLBqM/3LcrmBLl/pELnBebVFKgA==}
+    deprecated: This package is now deprecated. Move to @xterm/addon-webgl instead.
     peerDependencies:
       xterm: ^5.0.0
 
@@ -4857,6 +4862,10 @@ snapshots:
       xterm: 5.3.0
 
   xterm-addon-web-links@0.9.0(xterm@5.3.0):
+    dependencies:
+      xterm: 5.3.0
+
+  xterm-addon-webgl@0.16.0(xterm@5.3.0):
     dependencies:
       xterm: 5.3.0
 
