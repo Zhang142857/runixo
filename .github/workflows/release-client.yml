@@ -45,22 +45,17 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: true
         run: |
-          npx vite build
-          echo "=== Vite build complete ==="
-          ls -la dist/
-          ls -la dist/main/
-          ls -la dist/renderer/
-          echo "=== Starting electron-builder ==="
           if [ "${{ matrix.platform }}" = "win" ]; then
-            npx electron-builder --win --publish never
+            npm run build:win
           elif [ "${{ matrix.platform }}" = "mac" ]; then
-            npx electron-builder --mac --publish never
+            npm run build:mac
           else
-            npx electron-builder --linux --publish never
+            npm run build:linux
           fi
           echo "=== Build complete ==="
-          ls -la release/
+          ls -la release/ || echo "No release directory"
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'win'
