@@ -62,3 +62,24 @@ coverage/
 # 操作系统文件
 .DS_Store
 Desktop.ini
+
+# 截图和测试产物
+screenshots/
+**/screenshots/
+*.png
+client/test-results/
+client/tests/
+playwright-test/
+test-*.js
+*.spec.js
+
+# 自动生成的类型文件
+auto-imports.d.ts
+components.d.ts
+
+# MCP/Playwright 自动生成
+UsersAdministratorDesktopserverhubscreenshots/
+
+# 根目录的 package 文件（项目在子目录）
+/package.json
+/package-lock.json
