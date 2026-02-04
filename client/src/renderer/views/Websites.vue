@@ -227,7 +227,13 @@
                 </el-select>
               </el-form-item>
               <el-form-item label="项目目录" required>
-                <el-input v-model="newProject.path" placeholder="/var/www/my-app" />
+                <div class="path-input-row">
+                  <el-input v-model="newProject.path" placeholder="/var/www/my-app" />
+                  <el-button @click="showProjectPathBrowser = true">
+                    <el-icon><FolderOpened /></el-icon>
+                    浏览
+                  </el-button>
+                </div>
                 <div class="form-tip">项目代码存放的服务器目录</div>
               </el-form-item>
               <el-form-item label="运行端口" v-if="!['php', 'static-build'].includes(newProject.type)">
@@ -593,6 +599,58 @@
         <el-button type="primary" size="small" @click="saveProjectSettings" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 项目目录浏览器对话框 -->
+    <el-dialog v-model="showProjectPathBrowser" title="选择项目目录" width="500px">
+      <div class="path-browser">
+        <div class="browser-path">
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item @click="browseProjectPath('/')" class="clickable">
+              <el-icon><HomeFilled /></el-icon>
+            </el-breadcrumb-item>
+            <el-breadcrumb-item
+              v-for="(part, index) in projectBrowserPathParts"
+              :key="index"
+              @click="browseProjectPathIndex(index)"
+              class="clickable"
+            >
+              {{ part }}
+            </el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
+        <div class="browser-list" v-loading="projectBrowserLoading">
+          <div 
+            class="browser-item parent" 
+            @click="browseProjectPathParent"
+            v-if="projectBrowserPath !== '/'"
+          >
+            <el-icon><ArrowLeft /></el-icon>
+            <span>..</span>
+          </div>
+          <div 
+            v-for="dir in projectBrowserDirs" 
+            :key="dir.path"
+            class="browser-item"
+            @click="browseProjectPath(dir.path)"
+            @dblclick="selectProjectPath(dir.path)"
+          >
+            <el-icon color="#f0b429"><Folder /></el-icon>
+            <span>{{ dir.name }}</span>
+          </div>
+          <div v-if="projectBrowserDirs.length === 0 && !projectBrowserLoading" class="browser-empty">
+            此目录下没有子文件夹
+          </div>
+        </div>
+        <div class="browser-selected">
+          <span>当前选择:</span>
+          <code>{{ projectBrowserPath }}</code>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showProjectPathBrowser = false">取消</el-button>
+        <el-button type="primary" @click="selectProjectPath(projectBrowserPath)">选择此目录</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -600,7 +658,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useServerStore } from '@/stores/server'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh, Lock, Delete, ArrowDown, Check, Promotion, Monitor, CopyDocument, InfoFilled, Unlock, ArrowLeft, ArrowRight, FolderOpened, Folder, Document, Right } from '@element-plus/icons-vue'
+import { Plus, Refresh, Lock, Delete, ArrowDown, Check, Promotion, Monitor, CopyDocument, InfoFilled, Unlock, ArrowLeft, ArrowRight, FolderOpened, Folder, Document, Right, HomeFilled, Top } from '@element-plus/icons-vue'
 import TechIcon from '@/components/icons/TechIcons.vue'
 
 interface Site {
@@ -692,6 +750,16 @@ const uploadProgress = ref(0)
 const uploading = ref(false)
 const uploadLog = ref('')
 const selectedLocalPath = ref('')
+
+// 项目目录浏览器
+const showProjectPathBrowser = ref(false)
+const projectBrowserPath = ref('/var/www')
+const projectBrowserDirs = ref<{ name: string; path: string; isDir: boolean }[]>([])
+const projectBrowserLoading = ref(false)
+const projectBrowserPathParts = computed(() => {
+  if (!projectBrowserPath.value || projectBrowserPath.value === '/') return []
+  return projectBrowserPath.value.split('/').filter(Boolean)
+})
 
 // 服务器 IP
 const serverPublicIP = ref('')
@@ -860,6 +928,58 @@ async function selectFolder() {
     ElMessage.error('选择文件夹失败: ' + (e as Error).message)
   }
 }
+
+// 项目目录浏览器：浏览到指定路径
+async function browseProjectPath(path: string) {
+  if (!selectedServer.value) return
+  
+  projectBrowserLoading.value = true
+  projectBrowserPath.value = path
+  
+  try {
+    const result = await window.electronAPI.file.list(selectedServer.value, path)
+    projectBrowserDirs.value = result.files
+      .filter((f: any) => f.is_dir)
+      .map((f: any) => ({
+        name: f.name,
+        path: f.path,
+        isDir: true
+      }))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name))
+  } catch (e) {
+    ElMessage.error('加载目录失败: ' + (e as Error).message)
+    projectBrowserDirs.value = []
+  } finally {
+    projectBrowserLoading.value = false
+  }
+}
+
+// 项目目录浏览器：浏览到父目录
+function browseProjectPathParent() {
+  if (projectBrowserPath.value === '/') return
+  const parts = projectBrowserPath.value.split('/').filter(Boolean)
+  parts.pop()
+  browseProjectPath('/' + parts.join('/'))
+}
+
+// 项目目录浏览器：通过索引浏览
+function browseProjectPathIndex(index: number) {
+  const parts = projectBrowserPath.value.split('/').filter(Boolean)
+  browseProjectPath('/' + parts.slice(0, index + 1).join('/'))
+}
+
+// 项目目录浏览器：选择路径
+function selectProjectPath(path: string) {
+  newProject.value.path = path
+  showProjectPathBrowser.value = false
+}
+
+// 打开项目目录浏览器时初始化
+watch(showProjectPathBrowser, (val) => {
+  if (val) {
+    browseProjectPath(newProject.value.path || '/var/www')
+  }
+})
 
 // 扫描文件夹
 async function scanFolder(folderPath: string) {
@@ -2058,6 +2178,85 @@ function formatTime(ts: number): string {
     margin-top: 20px;
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
+  }
+}
+
+// 路径输入行
+.path-input-row {
+  display: flex;
+  gap: 8px;
+
+  .el-input {
+    flex: 1;
+  }
+}
+
+// 目录浏览器样式
+.path-browser {
+  .browser-path {
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 12px;
+
+    .el-breadcrumb {
+      font-size: 13px;
+    }
+
+    .clickable {
+      cursor: pointer;
+      &:hover {
+        color: var(--primary-color);
+      }
+    }
+  }
+
+  .browser-list {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    min-height: 200px;
+
+    .browser-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+
+      &:hover {
+        background: var(--bg-tertiary);
+      }
+
+      &.parent {
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+      }
+    }
+
+    .browser-empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+  }
+
+  .browser-selected {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 13px;
+
+    code {
+      font-family: 'Consolas', monospace;
+      color: var(--primary-color);
+    }
   }
 }
 </style>

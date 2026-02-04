@@ -1219,10 +1219,28 @@ async function loadDirectory() {
   loading.value = true
   selectedFiles.value = []
   try {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    initSimulatedFiles()
+    const path = currentPath.value || '/'
+    const result = await window.electronAPI.file.list(selectedServer.value, path)
+    
+    // 转换 API 返回的格式 (snake_case -> camelCase)
+    files.value = result.files.map((f: any) => ({
+      name: f.name,
+      path: f.path,
+      isDir: f.is_dir,
+      size: f.size,
+      mode: f.mode,
+      modTime: f.mod_time
+    }))
+    
+    // 排序：目录在前
+    files.value.sort((a, b) => {
+      if (a.isDir && !b.isDir) return -1
+      if (!a.isDir && b.isDir) return 1
+      return a.name.localeCompare(b.name)
+    })
   } catch (error) {
     ElMessage.error(`加载目录失败: ${(error as Error).message}`)
+    files.value = []
   } finally {
     loading.value = false
   }
@@ -1777,8 +1795,19 @@ async function browseToPath(path: string) {
   browserPath.value = path
   
   try {
-    const files = await window.electronAPI.server.listFiles(selectedServer.value, path)
-    browserDirs.value = files.filter((f: FileItem) => f.isDir).sort((a: FileItem, b: FileItem) => a.name.localeCompare(b.name))
+    const result = await window.electronAPI.file.list(selectedServer.value, path)
+    // 转换 API 返回的格式 (is_dir -> isDir)
+    browserDirs.value = result.files
+      .filter((f: any) => f.is_dir)
+      .map((f: any) => ({
+        name: f.name,
+        path: f.path,
+        isDir: true,
+        size: f.size,
+        mode: f.mode,
+        modTime: f.mod_time
+      }))
+      .sort((a: FileItem, b: FileItem) => a.name.localeCompare(b.name))
   } catch (e) {
     ElMessage.error('加载目录失败: ' + (e as Error).message)
     browserDirs.value = []
