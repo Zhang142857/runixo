@@ -1857,6 +1857,9 @@ async function uploadFolder() {
     const folderName = selectedFolderPath.value.split(/[/\\]/).pop() || 'upload'
     const fullTargetPath = `${basePath}/${folderName}`.replace(/\/+/g, '/')
     
+    console.log('[uploadFolder] Target path:', fullTargetPath)
+    console.log('[uploadFolder] Source folder:', selectedFolderPath.value)
+    
     // 创建目标目录
     uploadProgressText.value = '创建目标目录...'
     await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `mkdir -p "${fullTargetPath}"`])
@@ -1867,11 +1870,32 @@ async function uploadFolder() {
     const tarData = await window.electronAPI.fs.packDirectory(selectedFolderPath.value, {
       ignore: ['node_modules', '.git', '__pycache__', '.venv', 'venv', '.next', '.nuxt', 'target', 'vendor']
     })
+    
+    // tarData 可能是 Buffer 或者被序列化的对象，需要转换
+    let tarBuffer: Buffer
+    if (Buffer.isBuffer(tarData)) {
+      tarBuffer = tarData
+    } else if (tarData && typeof tarData === 'object' && tarData.type === 'Buffer' && Array.isArray(tarData.data)) {
+      // IPC 序列化后的 Buffer 格式
+      tarBuffer = Buffer.from(tarData.data)
+    } else if (tarData instanceof Uint8Array) {
+      tarBuffer = Buffer.from(tarData)
+    } else {
+      throw new Error('Invalid tar data format')
+    }
+    
+    console.log('[uploadFolder] Tar buffer size:', tarBuffer.length)
     uploadProgress.value = 30
+    
+    if (tarBuffer.length < 100) {
+      throw new Error('打包文件太小，可能打包失败')
+    }
     
     // 转换为 base64 并分块上传
     uploadProgressText.value = '上传中...'
-    const base64 = tarData.toString('base64')
+    const base64 = tarBuffer.toString('base64')
+    console.log('[uploadFolder] Base64 length:', base64.length)
+    
     const chunkSize = 500 * 1024
     const chunks = Math.ceil(base64.length / chunkSize)
     
@@ -1888,9 +1912,20 @@ async function uploadFolder() {
     // 解码并解压
     uploadProgressText.value = '解压文件...'
     uploadProgress.value = 85
-    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
+    
+    // 先检查上传的文件大小
+    const checkResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 'wc -c < /tmp/upload.tar.gz.b64'])
+    console.log('[uploadFolder] Uploaded b64 size:', checkResult.stdout.trim())
+    
+    // 解码并解压
+    const extractResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
       `base64 -d /tmp/upload.tar.gz.b64 > /tmp/upload.tar.gz && tar -xzf /tmp/upload.tar.gz -C "${fullTargetPath}" && rm -f /tmp/upload.tar.gz /tmp/upload.tar.gz.b64`
     ])
+    
+    if (extractResult.exit_code !== 0) {
+      console.error('[uploadFolder] Extract failed:', extractResult.stderr)
+      throw new Error('解压失败: ' + extractResult.stderr)
+    }
     
     uploadProgress.value = 100
     uploadProgressText.value = '上传完成!'
@@ -1906,6 +1941,7 @@ async function uploadFolder() {
     
     ElMessage.success(`文件夹已上传到 ${fullTargetPath}`)
   } catch (e) {
+    console.error('[uploadFolder] Error:', e)
     uploadProgressText.value = '上传失败: ' + (e as Error).message
     ElMessage.error('上传失败: ' + (e as Error).message)
   } finally {

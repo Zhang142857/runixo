@@ -479,36 +479,59 @@ export function setupIpcHandlers() {
     const tempDir = os.tmpdir()
     const tarFile = path.join(tempDir, `upload_${Date.now()}.tar.gz`)
     
+    console.log('[packDirectory] Source dir:', dirPath)
+    console.log('[packDirectory] Temp tar file:', tarFile)
+    console.log('[packDirectory] Ignore list:', ignore)
+    
     try {
-      // 构建排除参数
-      const excludeArgs = ignore.map(i => `--exclude="${i}"`).join(' ')
+      // 构建排除参数 - Windows tar 使用不同的格式
+      const isWindows = process.platform === 'win32'
+      const excludeArgs = ignore.map(i => `--exclude=${i}`).join(' ')
       
       // 使用系统 tar 命令打包
-      // Windows 10+ 自带 tar，Linux/Mac 也有
-      const isWindows = process.platform === 'win32'
+      const cmd = `tar -czf "${tarFile}" ${excludeArgs} -C "${dirPath}" .`
+      console.log('[packDirectory] Running:', cmd)
       
-      if (isWindows) {
-        // Windows: 使用 tar 命令
-        const cmd = `tar -czf "${tarFile}" ${excludeArgs} -C "${dirPath}" .`
-        console.log('[packDirectory] Running:', cmd)
-        execSync(cmd, { stdio: 'pipe', windowsHide: true })
-      } else {
-        // Linux/Mac
-        const cmd = `tar -czf "${tarFile}" ${excludeArgs} -C "${dirPath}" .`
-        console.log('[packDirectory] Running:', cmd)
-        execSync(cmd, { stdio: 'pipe' })
+      try {
+        execSync(cmd, { 
+          stdio: 'pipe', 
+          windowsHide: true,
+          encoding: 'utf8'
+        })
+      } catch (execError: any) {
+        console.error('[packDirectory] Tar command failed:', execError.message)
+        if (execError.stderr) {
+          console.error('[packDirectory] Stderr:', execError.stderr)
+        }
+        throw execError
+      }
+      
+      // 检查文件是否创建成功
+      if (!fs.existsSync(tarFile)) {
+        throw new Error('Tar file was not created')
+      }
+      
+      const stats = fs.statSync(tarFile)
+      console.log(`[packDirectory] Tar file created, size: ${stats.size} bytes`)
+      
+      if (stats.size < 100) {
+        throw new Error(`Tar file too small (${stats.size} bytes), something went wrong`)
       }
       
       // 读取打包后的文件
       const result = fs.readFileSync(tarFile)
-      console.log(`[packDirectory] Packed tar.gz size: ${result.length} bytes`)
+      console.log(`[packDirectory] Read tar.gz, buffer size: ${result.length} bytes`)
       
       return result
+    } catch (error) {
+      console.error('[packDirectory] Error:', error)
+      throw error
     } finally {
       // 清理临时文件
       try {
         if (fs.existsSync(tarFile)) {
           fs.unlinkSync(tarFile)
+          console.log('[packDirectory] Cleaned up temp file')
         }
       } catch (e) {
         console.error('[packDirectory] Failed to cleanup temp file:', e)
