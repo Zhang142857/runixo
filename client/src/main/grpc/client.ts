@@ -353,6 +353,82 @@ export class GrpcClient extends EventEmitter {
     return this.executeCommand('docker', args)
   }
 
+  // 流式文件上传
+  async uploadFile(
+    localData: Buffer | Uint8Array,
+    remotePath: string,
+    options?: {
+      mode?: number
+      createDirs?: boolean
+      isTarGz?: boolean
+      extractTo?: string
+      onProgress?: (sent: number, total: number) => void
+    }
+  ): Promise<{ success: boolean; message: string; bytesWritten: number; path: string }> {
+    return new Promise((resolve, reject) => {
+      const call = this.client.UploadFile(this.metadata, (error: Error | null, response: any) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve({
+            success: response.success,
+            message: response.message || response.error || '',
+            bytesWritten: parseInt(response.bytes_written || '0', 10),
+            path: response.path || remotePath
+          })
+        }
+      })
+
+      const data = localData instanceof Buffer ? localData : Buffer.from(localData)
+      const totalSize = data.length
+      const chunkSize = 64 * 1024 // 64KB chunks
+
+      // 发送开始消息
+      call.write({
+        start: {
+          path: remotePath,
+          total_size: totalSize,
+          mode: options?.mode || 0o644,
+          create_dirs: options?.createDirs ?? true,
+          is_tar_gz: options?.isTarGz ?? false,
+          extract_to: options?.extractTo || ''
+        }
+      })
+
+      // 分块发送数据
+      let sent = 0
+      const sendChunk = () => {
+        while (sent < totalSize) {
+          const end = Math.min(sent + chunkSize, totalSize)
+          const chunk = data.slice(sent, end)
+          
+          const canContinue = call.write({ chunk })
+          sent = end
+
+          if (options?.onProgress) {
+            options.onProgress(sent, totalSize)
+          }
+
+          if (!canContinue) {
+            // 等待 drain 事件
+            call.once('drain', sendChunk)
+            return
+          }
+        }
+
+        // 发送结束消息
+        call.write({ end: {} })
+        call.end()
+      }
+
+      sendChunk()
+
+      call.on('error', (err: Error) => {
+        reject(err)
+      })
+    })
+  }
+
   // 通用一元调用
   private unaryCall<T>(method: string, request: unknown): Promise<T> {
     return new Promise((resolve, reject) => {

@@ -400,6 +400,13 @@ export interface ElectronAPI {
     list: (serverId: string, path: string) => Promise<DirContent>
     read: (serverId: string, path: string) => Promise<FileContent>
     write: (serverId: string, path: string, content: string) => Promise<FileWriteResult>
+    uploadStream: (serverId: string, data: Buffer | Uint8Array, remotePath: string, options?: {
+      mode?: number
+      createDirs?: boolean
+      isTarGz?: boolean
+      extractTo?: string
+    }) => Promise<{ success: boolean; message: string; bytesWritten: number; path: string }>
+    onUploadProgress: (remotePath: string, callback: (progress: { sent: number; total: number; percent: number }) => void) => () => void
   }
   ai: {
     chat: (message: string, context?: AIContext) => Promise<string>

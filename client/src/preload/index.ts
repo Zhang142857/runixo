@@ -152,7 +152,19 @@ const electronAPI: ElectronAPI = {
     read: (serverId: string, path: string): Promise<FileContent> =>
       ipcRenderer.invoke('file:read', serverId, path),
     write: (serverId: string, path: string, content: string): Promise<FileWriteResult> =>
-      ipcRenderer.invoke('file:write', serverId, path, content)
+      ipcRenderer.invoke('file:write', serverId, path, content),
+    uploadStream: (serverId: string, data: Buffer | Uint8Array, remotePath: string, options?: {
+      mode?: number
+      createDirs?: boolean
+      isTarGz?: boolean
+      extractTo?: string
+    }): Promise<{ success: boolean; message: string; bytesWritten: number; path: string }> =>
+      ipcRenderer.invoke('file:uploadStream', serverId, data, remotePath, options),
+    onUploadProgress: (remotePath: string, callback: (progress: { sent: number; total: number; percent: number }) => void): (() => void) => {
+      const channel = `upload:progress:${remotePath}`
+      ipcRenderer.on(channel, (_, data) => callback(data))
+      return () => ipcRenderer.removeAllListeners(channel)
+    }
   },
 
   // AI 功能

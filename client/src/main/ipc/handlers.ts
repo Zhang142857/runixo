@@ -543,6 +543,44 @@ export function setupIpcHandlers() {
     return fs.readFileSync(filePath)
   })
 
+  // ==================== 流式文件上传 ====================
+  ipcMain.handle('file:uploadStream', async (event, serverId: string, localData: Buffer | Uint8Array | { type: string; data: number[] }, remotePath: string, options?: {
+    mode?: number
+    createDirs?: boolean
+    isTarGz?: boolean
+    extractTo?: string
+  }) => {
+    const client = serverConnections.get(serverId)
+    if (!client) {
+      throw new Error('Server not connected')
+    }
+
+    // 处理 IPC 序列化后的 Buffer
+    let data: Buffer
+    if (Buffer.isBuffer(localData)) {
+      data = localData
+    } else if (localData instanceof Uint8Array) {
+      data = Buffer.from(localData)
+    } else if (localData && typeof localData === 'object' && localData.type === 'Buffer' && Array.isArray(localData.data)) {
+      data = Buffer.from(localData.data)
+    } else {
+      throw new Error('Invalid data format')
+    }
+
+    console.log(`[uploadStream] Uploading ${data.length} bytes to ${remotePath}`)
+
+    return await client.uploadFile(data, remotePath, {
+      mode: options?.mode,
+      createDirs: options?.createDirs,
+      isTarGz: options?.isTarGz,
+      extractTo: options?.extractTo,
+      onProgress: (sent, total) => {
+        const percent = Math.floor((sent / total) * 100)
+        event.sender.send(`upload:progress:${remotePath}`, { sent, total, percent })
+      }
+    })
+  })
+
   // ==================== 外部链接 ====================
   ipcMain.handle('shell:openExternal', async (_, url: string) => {
     await shell.openExternal(url)

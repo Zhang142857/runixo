@@ -1860,11 +1860,6 @@ async function uploadFolder() {
     console.log('[uploadFolder] Target path:', fullTargetPath)
     console.log('[uploadFolder] Source folder:', selectedFolderPath.value)
     
-    // 创建目标目录
-    uploadProgressText.value = '创建目标目录...'
-    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `mkdir -p "${fullTargetPath}"`])
-    uploadProgress.value = 10
-    
     // 打包文件夹
     uploadProgressText.value = '打包文件...'
     const tarData = await window.electronAPI.fs.packDirectory(selectedFolderPath.value, {
@@ -1875,9 +1870,9 @@ async function uploadFolder() {
     let tarBytes: Uint8Array
     if (tarData instanceof Uint8Array) {
       tarBytes = tarData
-    } else if (tarData && typeof tarData === 'object' && tarData.type === 'Buffer' && Array.isArray(tarData.data)) {
+    } else if (tarData && typeof tarData === 'object' && (tarData as any).type === 'Buffer' && Array.isArray((tarData as any).data)) {
       // IPC 序列化后的 Buffer 格式
-      tarBytes = new Uint8Array(tarData.data)
+      tarBytes = new Uint8Array((tarData as any).data)
     } else if (ArrayBuffer.isView(tarData)) {
       tarBytes = new Uint8Array(tarData.buffer)
     } else {
@@ -1886,102 +1881,46 @@ async function uploadFolder() {
     }
     
     console.log('[uploadFolder] Tar bytes size:', tarBytes.length)
-    uploadProgress.value = 30
+    uploadProgress.value = 20
     
     if (tarBytes.length < 100) {
       throw new Error('打包文件太小，可能打包失败')
     }
     
-    // 转换为 base64
-    uploadProgressText.value = '编码中...'
+    // 使用 gRPC 流式上传
+    uploadProgressText.value = '上传中...'
     
-    // 使用浏览器 API 转换为 base64
-    let base64 = ''
-    const encodeChunkSize = 32768 // 32KB chunks for encoding
-    for (let i = 0; i < tarBytes.length; i += encodeChunkSize) {
-      const chunk = tarBytes.slice(i, Math.min(i + encodeChunkSize, tarBytes.length))
-      base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)))
-    }
+    // 临时文件路径
+    const tempTarPath = `/tmp/upload_${Date.now()}.tar.gz`
     
-    console.log('[uploadFolder] Base64 length:', base64.length)
+    // 监听上传进度
+    const removeProgressListener = window.electronAPI.file.onUploadProgress(tempTarPath, (progress) => {
+      uploadProgress.value = 20 + Math.floor(progress.percent * 0.6) // 20-80%
+      uploadProgressText.value = `上传中... ${Math.floor(progress.sent / 1024)}KB / ${Math.floor(progress.total / 1024)}KB`
+    })
     
-    // 清空临时文件
-    uploadProgressText.value = '准备上传...'
-    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 'rm -f /tmp/upload.tar.gz.b64 /tmp/upload.tar.gz'])
-    
-    // 分块上传 - 使用 echo 和重定向，避免 printf 的特殊字符问题
-    const uploadChunkSize = 200 * 1024 // 200KB per chunk (smaller to avoid command line limits)
-    const chunks = Math.ceil(base64.length / uploadChunkSize)
-    
-    console.log('[uploadFolder] Uploading in', chunks, 'chunks')
-    
-    for (let i = 0; i < chunks; i++) {
-      const chunk = base64.slice(i * uploadChunkSize, (i + 1) * uploadChunkSize)
+    try {
+      // 流式上传并解压
+      const result = await window.electronAPI.file.uploadStream(
+        selectedServer.value,
+        tarBytes,
+        tempTarPath,
+        {
+          mode: 0o644,
+          createDirs: true,
+          isTarGz: true,
+          extractTo: fullTargetPath
+        }
+      )
       
-      // 使用 cat 和 heredoc 来避免特殊字符问题
-      const result = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-        `cat >> /tmp/upload.tar.gz.b64 << 'ENDOFCHUNK'\n${chunk}\nENDOFCHUNK`
-      ])
-      
-      if (result.exit_code !== 0) {
-        console.error('[uploadFolder] Upload chunk failed:', result.stderr)
-        throw new Error(`上传分块 ${i + 1} 失败: ${result.stderr}`)
+      if (!result.success) {
+        throw new Error(result.message || '上传失败')
       }
       
-      uploadProgress.value = 30 + Math.floor(((i + 1) / chunks) * 50)
-      uploadProgressText.value = `上传中... ${i + 1}/${chunks}`
+      console.log('[uploadFolder] Upload result:', result)
+    } finally {
+      removeProgressListener()
     }
-    
-    // 检查上传的文件
-    const checkResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-      'ls -la /tmp/upload.tar.gz.b64 && wc -c < /tmp/upload.tar.gz.b64'
-    ])
-    console.log('[uploadFolder] Upload check:', checkResult.stdout)
-    
-    if (checkResult.exit_code !== 0) {
-      throw new Error('上传文件检查失败: ' + checkResult.stderr)
-    }
-    
-    // 解码并解压
-    uploadProgressText.value = '解压文件...'
-    uploadProgress.value = 85
-    
-    // 分步执行，便于调试
-    // 1. 移除 heredoc 产生的换行符
-    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-      "tr -d '\\n' < /tmp/upload.tar.gz.b64 > /tmp/upload.tar.gz.b64.clean && mv /tmp/upload.tar.gz.b64.clean /tmp/upload.tar.gz.b64"
-    ])
-    
-    // 2. base64 解码
-    const decodeResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-      'base64 -d /tmp/upload.tar.gz.b64 > /tmp/upload.tar.gz'
-    ])
-    
-    if (decodeResult.exit_code !== 0) {
-      console.error('[uploadFolder] Decode failed:', decodeResult.stderr)
-      throw new Error('Base64 解码失败: ' + decodeResult.stderr)
-    }
-    
-    // 3. 检查 tar.gz 文件
-    const tarCheckResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-      'ls -la /tmp/upload.tar.gz && file /tmp/upload.tar.gz'
-    ])
-    console.log('[uploadFolder] Tar file check:', tarCheckResult.stdout)
-    
-    // 4. 解压
-    const extractResult = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-      `tar -xzf /tmp/upload.tar.gz -C "${fullTargetPath}"`
-    ])
-    
-    if (extractResult.exit_code !== 0) {
-      console.error('[uploadFolder] Extract failed:', extractResult.stderr)
-      throw new Error('解压失败: ' + extractResult.stderr)
-    }
-    
-    // 5. 清理
-    await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 
-      'rm -f /tmp/upload.tar.gz /tmp/upload.tar.gz.b64'
-    ])
     
     uploadProgress.value = 100
     uploadProgressText.value = '上传完成!'

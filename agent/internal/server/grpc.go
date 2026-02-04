@@ -330,3 +330,208 @@ func (s *AgentServer) KillProcess(ctx context.Context, req *pb.KillProcessReques
 	}
 	return &pb.ActionResponse{Success: true, Message: "进程已终止"}, nil
 }
+
+// UploadFile 流式文件上传
+func (s *AgentServer) UploadFile(stream pb.AgentService_UploadFileServer) error {
+	var (
+		file       *os.File
+		filePath   string
+		totalSize  int64
+		bytesRecv  int64
+		isTarGz    bool
+		extractTo  string
+		createDirs bool
+	)
+
+	for {
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			// 上传完成
+			if file != nil {
+				file.Close()
+
+				// 如果是 tar.gz，需要解压
+				if isTarGz && extractTo != "" {
+					log.Info().Str("file", filePath).Str("extract_to", extractTo).Msg("解压文件")
+
+					// 创建解压目录
+					if err := os.MkdirAll(extractTo, 0755); err != nil {
+						os.Remove(filePath) // 清理临时文件
+						return status.Errorf(codes.Internal, "创建解压目录失败: %v", err)
+					}
+
+					// 解压
+					cmd := exec.Command("tar", "-xzf", filePath, "-C", extractTo)
+					if output, err := cmd.CombinedOutput(); err != nil {
+						os.Remove(filePath) // 清理临时文件
+						return status.Errorf(codes.Internal, "解压失败: %v, output: %s", err, string(output))
+					}
+
+					// 删除临时 tar.gz 文件
+					os.Remove(filePath)
+
+					return stream.SendAndClose(&pb.UploadResponse{
+						Success:      true,
+						Message:      "文件夹上传并解压成功",
+						BytesWritten: bytesRecv,
+						Path:         extractTo,
+					})
+				}
+
+				return stream.SendAndClose(&pb.UploadResponse{
+					Success:      true,
+					Message:      "文件上传成功",
+					BytesWritten: bytesRecv,
+					Path:         filePath,
+				})
+			}
+			return stream.SendAndClose(&pb.UploadResponse{
+				Success: false,
+				Error:   "未收到任何数据",
+			})
+		}
+		if err != nil {
+			if file != nil {
+				file.Close()
+				os.Remove(filePath)
+			}
+			return err
+		}
+
+		switch data := chunk.Data.(type) {
+		case *pb.FileChunk_Start:
+			// 开始上传
+			start := data.Start
+			filePath = start.Path
+			totalSize = start.TotalSize
+			isTarGz = start.IsTarGz
+			extractTo = start.ExtractTo
+			createDirs = start.CreateDirs
+
+			log.Info().
+				Str("path", filePath).
+				Int64("size", totalSize).
+				Bool("is_tar_gz", isTarGz).
+				Str("extract_to", extractTo).
+				Msg("开始接收文件")
+
+			// 安全检查
+			cleanPath, err := security.SanitizePath(filePath)
+			if err != nil {
+				return status.Errorf(codes.InvalidArgument, "路径安全检查失败: %v", err)
+			}
+			filePath = cleanPath
+
+			if err := pathValidator.ValidatePathForWrite(filePath); err != nil {
+				return status.Errorf(codes.PermissionDenied, "写入路径被拒绝: %v", err)
+			}
+
+			// 创建父目录
+			if createDirs {
+				dir := filepath.Dir(filePath)
+				if err := os.MkdirAll(dir, 0755); err != nil {
+					return status.Errorf(codes.Internal, "创建目录失败: %v", err)
+				}
+			}
+
+			// 创建文件
+			file, err = os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(start.Mode))
+			if err != nil {
+				return status.Errorf(codes.Internal, "创建文件失败: %v", err)
+			}
+
+		case *pb.FileChunk_Chunk:
+			// 写入数据块
+			if file == nil {
+				return status.Error(codes.FailedPrecondition, "未收到开始消息")
+			}
+
+			n, err := file.Write(data.Chunk)
+			if err != nil {
+				file.Close()
+				os.Remove(filePath)
+				return status.Errorf(codes.Internal, "写入文件失败: %v", err)
+			}
+			bytesRecv += int64(n)
+
+			// 每 10MB 记录一次进度
+			if bytesRecv%(10*1024*1024) < int64(len(data.Chunk)) {
+				log.Debug().
+					Int64("received", bytesRecv).
+					Int64("total", totalSize).
+					Float64("percent", float64(bytesRecv)/float64(totalSize)*100).
+					Msg("上传进度")
+			}
+
+		case *pb.FileChunk_End:
+			// 上传结束（可选的校验）
+			log.Info().Int64("bytes", bytesRecv).Msg("文件接收完成")
+		}
+	}
+}
+
+// DownloadFile 流式文件下载
+func (s *AgentServer) DownloadFile(req *pb.FileRequest, stream pb.AgentService_DownloadFileServer) error {
+	// 安全检查
+	cleanPath, err := security.SanitizePath(req.Path)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "路径安全检查失败: %v", err)
+	}
+
+	// 打开文件
+	file, err := os.Open(cleanPath)
+	if err != nil {
+		return status.Errorf(codes.NotFound, "打开文件失败: %v", err)
+	}
+	defer file.Close()
+
+	// 获取文件信息
+	info, err := file.Stat()
+	if err != nil {
+		return status.Errorf(codes.Internal, "获取文件信息失败: %v", err)
+	}
+
+	if info.IsDir() {
+		return status.Error(codes.InvalidArgument, "不能下载目录，请先打包")
+	}
+
+	// 发送开始消息
+	if err := stream.Send(&pb.FileChunk{
+		Data: &pb.FileChunk_Start{
+			Start: &pb.FileUploadStart{
+				Path:      cleanPath,
+				TotalSize: info.Size(),
+				Mode:      int64(info.Mode()),
+			},
+		},
+	}); err != nil {
+		return err
+	}
+
+	// 分块发送文件内容
+	buf := make([]byte, 64*1024) // 64KB chunks
+	for {
+		n, err := file.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return status.Errorf(codes.Internal, "读取文件失败: %v", err)
+		}
+
+		if err := stream.Send(&pb.FileChunk{
+			Data: &pb.FileChunk_Chunk{
+				Chunk: buf[:n],
+			},
+		}); err != nil {
+			return err
+		}
+	}
+
+	// 发送结束消息
+	return stream.Send(&pb.FileChunk{
+		Data: &pb.FileChunk_End{
+			End: &pb.FileUploadEnd{},
+		},
+	})
+}

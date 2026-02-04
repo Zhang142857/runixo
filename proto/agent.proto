@@ -22,6 +22,12 @@ service AgentService {
   rpc WriteFile(WriteFileRequest) returns (ActionResponse);
   rpc ListDirectory(DirRequest) returns (DirContent);
   rpc DeleteFile(FileRequest) returns (ActionResponse);
+  
+  // 流式文件上传 - 支持大文件
+  rpc UploadFile(stream FileChunk) returns (UploadResponse);
+  
+  // 流式文件下载 - 支持大文件
+  rpc DownloadFile(FileRequest) returns (stream FileChunk);
 
   // 日志流
   rpc TailLog(LogRequest) returns (stream LogLine);
@@ -212,6 +218,37 @@ message WriteFileRequest {
   bytes content = 2;
   int64 mode = 3;
   bool create_dirs = 4;
+}
+
+// 流式文件传输
+message FileChunk {
+  oneof data {
+    FileUploadStart start = 1;    // 开始上传，包含元信息
+    bytes chunk = 2;              // 文件数据块
+    FileUploadEnd end = 3;        // 结束上传
+  }
+}
+
+message FileUploadStart {
+  string path = 1;                // 目标路径
+  int64 total_size = 2;           // 文件总大小
+  int64 mode = 3;                 // 文件权限
+  bool create_dirs = 4;           // 是否创建父目录
+  string checksum = 5;            // 可选：文件校验和 (sha256)
+  bool is_tar_gz = 6;             // 是否是 tar.gz 压缩包（需要解压）
+  string extract_to = 7;          // 如果是压缩包，解压到此目录
+}
+
+message FileUploadEnd {
+  string checksum = 1;            // 可选：最终校验和
+}
+
+message UploadResponse {
+  bool success = 1;
+  string message = 2;
+  string error = 3;
+  int64 bytes_written = 4;        // 实际写入的字节数
+  string path = 5;                // 最终文件路径
 }
 
 message DirRequest {
