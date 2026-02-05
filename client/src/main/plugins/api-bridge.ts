@@ -512,4 +512,170 @@ export function setupPluginIPC(): void {
     const { pluginLoader } = require('./loader')
     return pluginLoader.getPluginRoutes()
   })
+
+  // 获取市场插件列表
+  ipcMain.handle('plugin:getMarketPlugins', async () => {
+    // 返回默认的市场插件列表
+    return [
+      {
+        id: 'cloudflare-security',
+        name: 'Cloudflare 安全防护',
+        version: '1.0.0',
+        description: '集成 Cloudflare 安全功能，自动封禁恶意 IP，防 DDoS 攻击',
+        author: 'ServerHub',
+        icon: '🛡️',
+        downloads: 5200,
+        rating: 4.7,
+        ratingCount: 128,
+        tags: ['安全', 'Cloudflare', '防火墙', 'DDoS'],
+        category: 'security',
+        official: true,
+        downloadUrl: 'https://plugins.serverhub.dev/cloudflare-security',
+        updatedAt: '2024-01-20',
+        features: ['自动封禁恶意IP', 'WAF规则管理', 'DDoS防护', '安全仪表板'],
+        changelog: [
+          { version: '1.0.0', date: '2024-01-20', changes: ['初始版本发布', '支持自动封禁', '集成WAF管理'] }
+        ],
+        reviews: [
+          { id: '1', user: '用户A', rating: 5, date: '2024-01-18', content: '非常好用，自动封禁功能很强大' },
+          { id: '2', user: '用户B', rating: 4, date: '2024-01-15', content: '配置简单，效果明显' }
+        ]
+      },
+      {
+        id: 'nginx-manager',
+        name: 'Nginx 管理',
+        version: '1.0.0',
+        description: '可视化管理 Nginx 配置、虚拟主机和 SSL 证书',
+        author: 'ServerHub',
+        icon: '🌐',
+        downloads: 6200,
+        rating: 4.6,
+        ratingCount: 189,
+        tags: ['Web服务器', 'Nginx', '反向代理'],
+        category: 'web',
+        official: true,
+        downloadUrl: 'https://plugins.serverhub.dev/nginx-manager',
+        updatedAt: '2024-01-15',
+        features: ['虚拟主机管理', 'SSL证书配置', '反向代理设置', '负载均衡'],
+        changelog: [
+          { version: '1.0.0', date: '2024-01-15', changes: ['初始版本', '支持虚拟主机管理'] }
+        ],
+        reviews: []
+      },
+      {
+        id: 'mysql-manager',
+        name: 'MySQL 管理',
+        version: '1.0.0',
+        description: '数据库管理、备份恢复、性能监控',
+        author: 'ServerHub',
+        icon: '🗄️',
+        downloads: 5100,
+        rating: 4.5,
+        ratingCount: 167,
+        tags: ['数据库', 'MySQL', 'SQL'],
+        category: 'database',
+        official: true,
+        downloadUrl: 'https://plugins.serverhub.dev/mysql-manager',
+        updatedAt: '2024-01-10',
+        features: ['数据库管理', '用户权限', '备份恢复', '性能监控'],
+        changelog: [],
+        reviews: []
+      },
+      {
+        id: 'redis-manager',
+        name: 'Redis 管理',
+        version: '1.0.0',
+        description: 'Redis 数据库可视化管理，支持键值浏览、监控',
+        author: 'ServerHub',
+        icon: '🔴',
+        downloads: 4300,
+        rating: 4.4,
+        ratingCount: 134,
+        tags: ['数据库', 'Redis', '缓存'],
+        category: 'database',
+        official: true,
+        downloadUrl: 'https://plugins.serverhub.dev/redis-manager',
+        updatedAt: '2024-01-08',
+        features: ['键值浏览', '数据编辑', '性能监控', '内存分析'],
+        changelog: [],
+        reviews: []
+      },
+      {
+        id: 'backup-manager',
+        name: '自动备份',
+        version: '1.0.0',
+        description: '定时备份文件和数据库到本地或云存储',
+        author: 'ServerHub',
+        icon: '💾',
+        downloads: 4200,
+        rating: 4.3,
+        ratingCount: 98,
+        tags: ['备份', '定时任务', '云存储'],
+        category: 'tools',
+        official: true,
+        downloadUrl: 'https://plugins.serverhub.dev/backup-manager',
+        updatedAt: '2024-01-05',
+        features: ['定时备份', '增量备份', '云存储支持', '备份恢复'],
+        changelog: [],
+        reviews: []
+      },
+      {
+        id: 'advanced-monitor',
+        name: '高级监控',
+        version: '1.0.0',
+        description: '详细的性能监控、告警通知、历史数据',
+        author: 'ServerHub',
+        icon: '📊',
+        downloads: 5600,
+        rating: 4.6,
+        ratingCount: 145,
+        tags: ['监控', '告警', '性能'],
+        category: 'monitor',
+        official: true,
+        downloadUrl: 'https://plugins.serverhub.dev/advanced-monitor',
+        updatedAt: '2024-01-03',
+        features: ['实时监控', '历史数据', '告警规则', '邮件通知'],
+        changelog: [],
+        reviews: []
+      },
+      {
+        id: 'minecraft-server',
+        name: 'Minecraft 服务器',
+        version: '0.9.0',
+        description: '管理 Minecraft 服务器、玩家、插件',
+        author: 'Community',
+        icon: '⛏️',
+        downloads: 3800,
+        rating: 4.7,
+        ratingCount: 312,
+        tags: ['游戏', 'Minecraft', '服务器'],
+        category: 'game',
+        official: false,
+        downloadUrl: 'https://plugins.serverhub.dev/minecraft-server',
+        updatedAt: '2024-01-18',
+        features: ['服务器控制', '玩家管理', '插件管理', '世界备份'],
+        changelog: [],
+        reviews: []
+      },
+      {
+        id: 'firewall-manager',
+        name: '防火墙管理',
+        version: '1.0.0',
+        description: '可视化管理 iptables/firewalld 规则',
+        author: 'ServerHub',
+        icon: '🔥',
+        downloads: 3200,
+        rating: 4.2,
+        ratingCount: 87,
+        tags: ['安全', '防火墙', '网络'],
+        category: 'security',
+        official: true,
+        downloadUrl: 'https://plugins.serverhub.dev/firewall-manager',
+        updatedAt: '2024-01-02',
+        features: ['规则管理', '端口控制', 'IP黑白名单', '日志分析'],
+        changelog: [],
+        reviews: []
+      }
+    ]
+  })
 }

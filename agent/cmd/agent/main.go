@@ -15,7 +15,9 @@ import (
 	pb "github.com/serverhub/agent/api/proto"
 	"github.com/serverhub/agent/internal/api"
 	"github.com/serverhub/agent/internal/auth"
+	"github.com/serverhub/agent/internal/plugin"
 	"github.com/serverhub/agent/internal/server"
+	"github.com/serverhub/agent/internal/updater"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -83,6 +85,11 @@ func loadConfig(configFile string) error {
 	viper.SetDefault("auth.token", "")
 	viper.SetDefault("metrics.interval", 2)
 	viper.SetDefault("log.level", "info")
+	viper.SetDefault("data.dir", "/var/lib/serverhub")
+	viper.SetDefault("plugins.dir", "/var/lib/serverhub/plugins")
+	viper.SetDefault("update.auto", false)
+	viper.SetDefault("update.channel", "stable")
+	viper.SetDefault("update.interval", 3600)
 
 	// 环境变量覆盖
 	viper.AutomaticEnv()
@@ -112,6 +119,41 @@ func run() error {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	apiAddr := fmt.Sprintf("%s:%d", host, apiPort)
 	token := viper.GetString("auth.token")
+	dataDir := viper.GetString("data.dir")
+	pluginsDir := viper.GetString("plugins.dir")
+
+	// 创建数据目录
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return fmt.Errorf("创建数据目录失败: %w", err)
+	}
+
+	// 初始化插件管理器
+	pluginManager, err := plugin.NewManager(pluginsDir)
+	if err != nil {
+		return fmt.Errorf("初始化插件管理器失败: %w", err)
+	}
+	defer pluginManager.Close()
+
+	// 启动已启用的插件
+	pluginManager.StartEnabledPlugins()
+
+	// 初始化更新器
+	agentUpdater, err := updater.NewUpdater(version, dataDir)
+	if err != nil {
+		return fmt.Errorf("初始化更新器失败: %w", err)
+	}
+	defer agentUpdater.Stop()
+
+	// 配置更新器
+	if viper.GetBool("update.auto") {
+		agentUpdater.SetConfig(&updater.Config{
+			AutoUpdate:    true,
+			CheckInterval: viper.GetInt("update.interval"),
+			UpdateChannel: viper.GetString("update.channel"),
+			NotifyOnly:    false,
+		})
+		agentUpdater.Start()
+	}
 
 	// 创建 gRPC 监听器
 	listener, err := net.Listen("tcp", addr)
@@ -152,6 +194,14 @@ func run() error {
 	agentServer := server.NewAgentServer(version, token)
 	pb.RegisterAgentServiceServer(grpcServer, agentServer)
 
+	// 注册插件服务
+	pluginServer := server.NewPluginServer(pluginManager)
+	pb.RegisterPluginServiceServer(grpcServer, pluginServer)
+
+	// 注册更新服务
+	updateServer := server.NewUpdateServer(agentUpdater)
+	pb.RegisterUpdateServiceServer(grpcServer, updateServer)
+
 	// 创建 REST API 服务器
 	apiServer := api.NewServer(token, version)
 	mux := http.NewServeMux()
@@ -170,6 +220,7 @@ func run() error {
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
 		log.Info().Msg("收到关闭信号，正在停止服务...")
+		pluginManager.StopAllPlugins()
 		grpcServer.GracefulStop()
 		httpServer.Shutdown(ctx)
 		cancel()
@@ -179,6 +230,7 @@ func run() error {
 		Str("version", version).
 		Str("grpc", addr).
 		Str("api", apiAddr).
+		Bool("auto_update", viper.GetBool("update.auto")).
 		Msg("ServerHub Agent 已启动")
 
 	// 启动 REST API 服务器

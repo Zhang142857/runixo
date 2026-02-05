@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell, session } from 'electron'
 import { join } from 'path'
 import { setupIpcHandlers } from './ipc/handlers'
+import { setupPluginIPC } from './plugins/api-bridge'
 
 // 禁用硬件加速（可选，某些系统上可能需要）
 // app.disableHardwareAcceleration()
@@ -72,6 +73,7 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow()
   setupIpcHandlers()
+  setupPluginIPC()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -70,7 +70,6 @@ import {
   Monitor,
   Box,
   FolderOpened,
-  Terminal,
   Connection,
   Cpu,
   Warning
@@ -114,7 +113,7 @@ const isDangerous = computed(() => {
 const toolIconMap: Record<string, unknown> = {
   // 系统工具
   get_system_info: Monitor,
-  execute_command: Terminal,
+  execute_command: Monitor,
   list_services: Setting,
   service_action: Setting,
   list_processes: Cpu,
@@ -130,7 +129,7 @@ const toolIconMap: Record<string, unknown> = {
   remove_image: Box,
   list_networks: Connection,
   list_volumes: Box,
-  exec_container: Terminal,
+  exec_container: Monitor,
   container_stats: Box,
   // 文件工具
   list_directory: FolderOpened,
@@ -148,7 +147,7 @@ const toolIconMap: Record<string, unknown> = {
 
 // 获取工具图标
 const toolIcon = computed(() => {
-  return toolIconMap[props.toolCall.name] || Terminal
+  return toolIconMap[props.toolCall.name] || Monitor
 })
 
 // 格式化 JSON

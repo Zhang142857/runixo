@@ -56,12 +56,12 @@ onMounted(() => {
 .page-content {
   flex: 1;
   overflow: auto;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-normal);
 }
 
 .fade-enter-from,

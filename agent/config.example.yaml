@@ -27,3 +27,24 @@ metrics:
 log:
   # 日志级别: debug, info, warn, error
   level: "info"
+
+# 数据存储配置
+data:
+  # 数据目录
+  dir: "/var/lib/serverhub"
+
+# 插件配置
+plugins:
+  # 插件目录
+  dir: "/var/lib/serverhub/plugins"
+
+# 自动更新配置
+update:
+  # 是否启用自动更新
+  auto: false
+  # 更新通道: stable, beta, nightly
+  channel: "stable"
+  # 检查间隔（秒）
+  interval: 3600
+  # 仅通知，不自动安装
+  notify_only: true

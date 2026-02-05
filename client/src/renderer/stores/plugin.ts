@@ -64,6 +64,7 @@ export interface MarketPlugin {
   description: string
   author: string
   icon?: string
+  iconBg?: string
   downloads: number
   rating: number
   ratingCount: number
@@ -170,7 +171,12 @@ export const usePluginStore = defineStore('plugin', () => {
     marketLoading.value = true
     try {
       const result = await window.electronAPI.plugin.getMarketPlugins()
-      marketPlugins.value = result
+      if (result && result.length > 0) {
+        marketPlugins.value = result
+      } else {
+        // API 返回空数组，使用默认数据
+        marketPlugins.value = getDefaultMarketPlugins()
+      }
     } catch (e) {
       console.error('[PluginStore] Failed to load market plugins:', e)
       // 使用模拟数据

@@ -388,3 +388,189 @@ message HttpProxyResponse {
   bytes body = 5;
   string error = 6;
 }
+
+// ==================== 插件系统 ====================
+
+// 插件服务
+service PluginService {
+  // 列出已安装的插件
+  rpc ListPlugins(Empty) returns (PluginList);
+  // 安装插件
+  rpc InstallPlugin(InstallPluginRequest) returns (ActionResponse);
+  // 卸载插件
+  rpc UninstallPlugin(PluginRequest) returns (ActionResponse);
+  // 启用插件
+  rpc EnablePlugin(PluginRequest) returns (ActionResponse);
+  // 禁用插件
+  rpc DisablePlugin(PluginRequest) returns (ActionResponse);
+  // 获取插件配置
+  rpc GetPluginConfig(PluginRequest) returns (PluginConfig);
+  // 设置插件配置
+  rpc SetPluginConfig(SetPluginConfigRequest) returns (ActionResponse);
+  // 获取插件状态
+  rpc GetPluginStatus(PluginRequest) returns (PluginStatus);
+  // 获取可用插件列表（从远程仓库）
+  rpc GetAvailablePlugins(Empty) returns (AvailablePluginList);
+}
+
+// 插件请求
+message PluginRequest {
+  string plugin_id = 1;
+}
+
+// 安装插件请求
+message InstallPluginRequest {
+  string plugin_id = 1;
+  string source = 2;           // 来源: official, url, local
+  string url = 3;              // 如果 source 是 url，则为下载地址
+  bytes data = 4;              // 如果 source 是 local，则为插件数据
+}
+
+// 插件列表
+message PluginList {
+  repeated PluginInfo plugins = 1;
+}
+
+// 插件信息
+message PluginInfo {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string description = 4;
+  string author = 5;
+  string icon = 6;
+  PluginState state = 7;
+  PluginType type = 8;
+  repeated string permissions = 9;
+  int64 installed_at = 10;
+  int64 updated_at = 11;
+}
+
+// 插件状态
+enum PluginState {
+  PLUGIN_INSTALLED = 0;
+  PLUGIN_ENABLED = 1;
+  PLUGIN_DISABLED = 2;
+  PLUGIN_ERROR = 3;
+  PLUGIN_UPDATING = 4;
+}
+
+// 插件类型
+enum PluginType {
+  PLUGIN_CLIENT = 0;           // 仅客户端插件
+  PLUGIN_AGENT = 1;            // 仅 Agent 端插件
+  PLUGIN_HYBRID = 2;           // 混合插件（客户端 + Agent）
+}
+
+// 插件配置
+message PluginConfig {
+  string plugin_id = 1;
+  string config_json = 2;      // JSON 格式的配置
+}
+
+// 设置插件配置请求
+message SetPluginConfigRequest {
+  string plugin_id = 1;
+  string config_json = 2;
+}
+
+// 插件状态详情
+message PluginStatus {
+  string plugin_id = 1;
+  PluginState state = 2;
+  bool running = 3;
+  string error = 4;
+  int64 uptime = 5;
+  map<string, string> stats = 6;
+}
+
+// 可用插件列表
+message AvailablePluginList {
+  repeated AvailablePlugin plugins = 1;
+}
+
+// 可用插件信息
+message AvailablePlugin {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string description = 4;
+  string author = 5;
+  string icon = 6;
+  PluginType type = 7;
+  int64 downloads = 8;
+  double rating = 9;
+  int32 rating_count = 10;
+  repeated string tags = 11;
+  string category = 12;
+  bool official = 13;
+  string download_url = 14;
+  string updated_at = 15;
+}
+
+// ==================== 自动更新系统 ====================
+
+// 更新服务
+service UpdateService {
+  // 检查更新
+  rpc CheckUpdate(Empty) returns (UpdateInfo);
+  // 下载更新
+  rpc DownloadUpdate(UpdateRequest) returns (stream DownloadProgress);
+  // 应用更新
+  rpc ApplyUpdate(UpdateRequest) returns (ActionResponse);
+  // 获取更新配置
+  rpc GetUpdateConfig(Empty) returns (UpdateConfig);
+  // 设置更新配置
+  rpc SetUpdateConfig(UpdateConfig) returns (ActionResponse);
+  // 获取更新历史
+  rpc GetUpdateHistory(Empty) returns (UpdateHistory);
+}
+
+// 更新信息
+message UpdateInfo {
+  bool available = 1;
+  string current_version = 2;
+  string latest_version = 3;
+  string release_notes = 4;
+  string download_url = 5;
+  int64 size = 6;
+  string checksum = 7;
+  string release_date = 8;
+  bool is_critical = 9;
+}
+
+// 更新请求
+message UpdateRequest {
+  string version = 1;
+}
+
+// 下载进度
+message DownloadProgress {
+  int64 downloaded = 1;
+  int64 total = 2;
+  int32 percent = 3;
+  string status = 4;           // downloading, verifying, ready
+}
+
+// 更新配置
+message UpdateConfig {
+  bool auto_update = 1;
+  int32 check_interval = 2;    // 检查间隔（秒）
+  string update_channel = 3;   // stable, beta, nightly
+  string last_check = 4;
+  bool notify_only = 5;        // 仅通知，不自动安装
+}
+
+// 更新历史
+message UpdateHistory {
+  repeated UpdateRecord records = 1;
+}
+
+// 更新记录
+message UpdateRecord {
+  string version = 1;
+  string from_version = 2;
+  int64 timestamp = 3;
+  bool success = 4;
+  string error = 5;
+}

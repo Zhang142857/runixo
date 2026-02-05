@@ -124,7 +124,7 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .header {
   height: var(--header-height);
-  padding: 0 20px;
+  padding: 0 var(--space-5);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -139,12 +139,12 @@ onUnmounted(() => {
 .header-center {
   flex: 1;
   max-width: 480px;
-  margin: 0 24px;
+  margin: 0 var(--space-6);
 
   .search-input {
     :deep(.el-input__wrapper) {
       background-color: var(--bg-tertiary);
-      border-radius: 8px;
+      border-radius: var(--radius-lg);
     }
   }
 }
@@ -152,7 +152,7 @@ onUnmounted(() => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 
   .server-select {
     width: 160px;
@@ -165,7 +165,7 @@ onUnmounted(() => {
   .server-option {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
 
     .status-dot {
       width: 8px;
@@ -174,17 +174,20 @@ onUnmounted(() => {
 
       &.connected {
         background-color: var(--success-color);
+        box-shadow: 0 0 6px var(--success-color);
       }
     }
   }
 
   .ai-button {
-    background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+    background: var(--primary-gradient);
     border: none;
     color: white;
+    transition: all var(--transition-fast);
 
     &:hover {
       opacity: 0.9;
+      transform: scale(1.05);
     }
   }
 

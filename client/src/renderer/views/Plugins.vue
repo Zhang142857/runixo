@@ -94,7 +94,9 @@
             @click="showPluginDetail(plugin)"
           >
             <div class="plugin-header">
-              <div class="plugin-icon">{{ plugin.icon }}</div>
+              <div class="plugin-icon" :style="{ background: plugin.iconBg || 'var(--bg-tertiary)' }">
+                <TechIcon :name="plugin.icon" />
+              </div>
               <div class="plugin-info">
                 <h3>{{ plugin.name }}</h3>
                 <span class="plugin-author">by {{ plugin.author }}</span>
@@ -163,7 +165,9 @@
             @click="showPluginDetail(plugin)"
           >
             <div class="plugin-header">
-              <div class="plugin-icon">{{ plugin.icon }}</div>
+              <div class="plugin-icon" :style="{ background: plugin.iconBg || 'var(--bg-tertiary)' }">
+                <TechIcon :name="plugin.icon" />
+              </div>
               <div class="plugin-info">
                 <h3>{{ plugin.name }}</h3>
                 <span class="plugin-version">v{{ plugin.version }}</span>
@@ -207,7 +211,9 @@
     <el-dialog v-model="showDetailDialog" :title="currentPlugin?.name" width="700px">
       <div v-if="currentPlugin" class="plugin-detail">
         <div class="detail-header">
-          <div class="plugin-icon large">{{ currentPlugin.icon }}</div>
+          <div class="plugin-icon large" :style="{ background: currentPlugin.iconBg || 'var(--bg-tertiary)' }">
+            <TechIcon :name="currentPlugin.icon" />
+          </div>
           <div class="detail-info">
             <h2>{{ currentPlugin.name }}</h2>
             <p class="author">by {{ currentPlugin.author }}</p>
@@ -402,8 +408,160 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Setting, Refresh } from '@element-plus/icons-vue'
 import { usePluginStore, type PluginInfo, type MarketPlugin } from '@/stores/plugin'
+import TechIcon from '@/components/icons/TechIcons.vue'
 
 const pluginStore = usePluginStore()
+
+// 本地默认插件数据（备用）
+const defaultPlugins: MarketPlugin[] = [
+  {
+    id: 'cloudflare-security',
+    name: 'Cloudflare 安全防护',
+    version: '1.0.0',
+    description: '集成 Cloudflare 安全功能，自动封禁恶意 IP，防 DDoS 攻击',
+    author: 'ServerHub',
+    icon: 'cloudflare',
+    iconBg: '#F38020',
+    downloads: 5200,
+    rating: 4.7,
+    ratingCount: 128,
+    tags: ['安全', 'Cloudflare', '防火墙', 'DDoS'],
+    category: 'security',
+    official: true,
+    downloadUrl: 'https://plugins.serverhub.dev/cloudflare-security',
+    updatedAt: '2024-01-20',
+    features: ['自动封禁恶意IP', 'WAF规则管理', 'DDoS防护', '安全仪表板']
+  },
+  {
+    id: 'nginx-manager',
+    name: 'Nginx 管理',
+    version: '1.0.0',
+    description: '可视化管理 Nginx 配置、虚拟主机和 SSL 证书',
+    author: 'ServerHub',
+    icon: 'nginx',
+    iconBg: '#009639',
+    downloads: 6200,
+    rating: 4.6,
+    ratingCount: 189,
+    tags: ['Web服务器', 'Nginx', '反向代理'],
+    category: 'web',
+    official: true,
+    downloadUrl: 'https://plugins.serverhub.dev/nginx-manager',
+    updatedAt: '2024-01-15',
+    features: ['虚拟主机管理', 'SSL证书配置', '反向代理设置', '负载均衡']
+  },
+  {
+    id: 'mysql-manager',
+    name: 'MySQL 管理',
+    version: '1.0.0',
+    description: '数据库管理、备份恢复、性能监控',
+    author: 'ServerHub',
+    icon: 'mysql',
+    iconBg: '#4479A1',
+    downloads: 5100,
+    rating: 4.5,
+    ratingCount: 167,
+    tags: ['数据库', 'MySQL', 'SQL'],
+    category: 'database',
+    official: true,
+    downloadUrl: 'https://plugins.serverhub.dev/mysql-manager',
+    updatedAt: '2024-01-10',
+    features: ['数据库管理', '用户权限', '备份恢复', '性能监控']
+  },
+  {
+    id: 'redis-manager',
+    name: 'Redis 管理',
+    version: '1.0.0',
+    description: 'Redis 数据库可视化管理，支持键值浏览、监控',
+    author: 'ServerHub',
+    icon: 'redis',
+    iconBg: '#DC382D',
+    downloads: 4300,
+    rating: 4.4,
+    ratingCount: 134,
+    tags: ['数据库', 'Redis', '缓存'],
+    category: 'database',
+    official: true,
+    downloadUrl: 'https://plugins.serverhub.dev/redis-manager',
+    updatedAt: '2024-01-08',
+    features: ['键值浏览', '数据编辑', '性能监控', '内存分析']
+  },
+  {
+    id: 'backup-manager',
+    name: '自动备份',
+    version: '1.0.0',
+    description: '定时备份文件和数据库到本地或云存储',
+    author: 'ServerHub',
+    icon: 'backup',
+    iconBg: '#1989FA',
+    downloads: 4200,
+    rating: 4.3,
+    ratingCount: 98,
+    tags: ['备份', '定时任务', '云存储'],
+    category: 'tools',
+    official: true,
+    downloadUrl: 'https://plugins.serverhub.dev/backup-manager',
+    updatedAt: '2024-01-05',
+    features: ['定时备份', '增量备份', '云存储支持', '备份恢复']
+  },
+  {
+    id: 'advanced-monitor',
+    name: '高级监控',
+    version: '1.0.0',
+    description: '详细的性能监控、告警通知、历史数据',
+    author: 'ServerHub',
+    icon: 'monitor',
+    iconBg: '#6366f1',
+    downloads: 5600,
+    rating: 4.6,
+    ratingCount: 145,
+    tags: ['监控', '告警', '性能'],
+    category: 'monitor',
+    official: true,
+    downloadUrl: 'https://plugins.serverhub.dev/advanced-monitor',
+    updatedAt: '2024-01-03',
+    features: ['实时监控', '历史数据', '告警规则', '邮件通知']
+  },
+  {
+    id: 'minecraft-server',
+    name: 'Minecraft 服务器',
+    version: '0.9.0',
+    description: '管理 Minecraft 服务器、玩家、插件',
+    author: 'Community',
+    icon: 'minecraft',
+    iconBg: '#3E8B3E',
+    downloads: 3800,
+    rating: 4.7,
+    ratingCount: 312,
+    tags: ['游戏', 'Minecraft', '服务器'],
+    category: 'game',
+    official: false,
+    downloadUrl: 'https://plugins.serverhub.dev/minecraft-server',
+    updatedAt: '2024-01-18',
+    features: ['服务器控制', '玩家管理', '插件管理', '世界备份']
+  },
+  {
+    id: 'firewall-manager',
+    name: '防火墙管理',
+    version: '1.0.0',
+    description: '可视化管理 iptables/firewalld 规则',
+    author: 'ServerHub',
+    icon: 'firewall',
+    iconBg: '#1989FA',
+    downloads: 3200,
+    rating: 4.2,
+    ratingCount: 87,
+    tags: ['安全', '防火墙', '网络'],
+    category: 'security',
+    official: true,
+    downloadUrl: 'https://plugins.serverhub.dev/firewall-manager',
+    updatedAt: '2024-01-02',
+    features: ['规则管理', '端口控制', 'IP黑白名单', '日志分析']
+  }
+]
+
+// 本地插件数据（用于显示）
+const localPlugins = ref<MarketPlugin[]>(defaultPlugins)
 
 const searchQuery = ref('')
 const activeTab = ref('all')
@@ -432,7 +590,8 @@ const categories = [
 // 合并已安装插件和市场插件
 const allPlugins = computed(() => {
   const installed = pluginStore.plugins
-  const market = pluginStore.marketPlugins
+  // 优先使用 store 中的数据，如果为空则使用本地默认数据
+  const market = pluginStore.marketPlugins.length > 0 ? pluginStore.marketPlugins : localPlugins.value
 
   return market.map(mp => {
     const installedPlugin = installed.find(ip => ip.id === mp.id)
@@ -447,7 +606,12 @@ const allPlugins = computed(() => {
   })
 })
 
-const officialCount = computed(() => pluginStore.marketPlugins.filter(p => p.official).length)
+// 插件数量（使用实际显示的数据）
+const plugins = computed(() => {
+  return pluginStore.marketPlugins.length > 0 ? pluginStore.marketPlugins : localPlugins.value
+})
+
+const officialCount = computed(() => plugins.value.filter(p => p.official).length)
 
 const updatesAvailable = computed(() =>
   allPlugins.value.filter(p => p.installed && p.hasUpdate)
@@ -622,8 +786,16 @@ function submitReview() {
 }
 
 onMounted(async () => {
-  await pluginStore.initialize()
-  await pluginStore.loadMarketPlugins()
+  try {
+    await pluginStore.initialize()
+  } catch (e) {
+    console.error('[Plugins] Initialize failed:', e)
+  }
+  try {
+    await pluginStore.loadMarketPlugins()
+  } catch (e) {
+    console.error('[Plugins] Load market plugins failed:', e)
+  }
 })
 </script>
 
@@ -735,10 +907,27 @@ onMounted(async () => {
     margin-bottom: 12px;
 
     .plugin-icon {
-      font-size: 32px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      :deep(svg) {
+        width: 24px;
+        height: 24px;
+      }
 
       &.large {
-        font-size: 48px;
+        width: 56px;
+        height: 56px;
+
+        :deep(svg) {
+          width: 32px;
+          height: 32px;
+        }
       }
     }
 

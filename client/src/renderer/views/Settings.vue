@@ -605,7 +605,7 @@
       <!-- 更新 -->
       <el-tab-pane label="更新" name="update">
         <el-card>
-          <template #header><span>软件更新</span></template>
+          <template #header><span>客户端更新</span></template>
           <div class="update-section">
             <div class="current-version">
               <span class="label">当前版本</span>
@@ -621,6 +621,59 @@
               <el-switch v-model="settings.update.autoDownload" :disabled="!settings.update.autoCheck" />
             </el-form-item>
           </el-form>
+        </el-card>
+
+        <el-card>
+          <template #header>
+            <div class="card-header-with-icon">
+              <el-icon><Monitor /></el-icon>
+              <span>服务器 Agent 自动更新</span>
+            </div>
+          </template>
+          <el-alert
+            type="info"
+            :closable="false"
+            style="margin-bottom: 16px"
+          >
+            <template #title>
+              启用后，服务器上的 Agent 将自动检测并安装新版本，无需手动更新。
+            </template>
+          </el-alert>
+          <el-form label-width="160px">
+            <el-form-item label="启用自动更新">
+              <el-switch v-model="settings.agentUpdate.autoUpdate" />
+              <span class="form-hint">Agent 将在后台自动更新到最新版本</span>
+            </el-form-item>
+            <el-form-item label="更新通道">
+              <el-select v-model="settings.agentUpdate.channel" style="width: 200px" :disabled="!settings.agentUpdate.autoUpdate">
+                <el-option label="稳定版 (推荐)" value="stable" />
+                <el-option label="测试版" value="beta" />
+                <el-option label="开发版" value="nightly" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="检查间隔">
+              <el-select v-model="settings.agentUpdate.checkInterval" style="width: 200px" :disabled="!settings.agentUpdate.autoUpdate">
+                <el-option label="每小时" :value="3600" />
+                <el-option label="每 6 小时" :value="21600" />
+                <el-option label="每天" :value="86400" />
+                <el-option label="每周" :value="604800" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="仅通知不安装">
+              <el-switch v-model="settings.agentUpdate.notifyOnly" :disabled="!settings.agentUpdate.autoUpdate" />
+              <span class="form-hint">发现新版本时仅通知，不自动安装</span>
+            </el-form-item>
+          </el-form>
+          <el-divider />
+          <div class="agent-update-actions">
+            <el-button @click="checkAgentUpdates" :loading="checkingAgentUpdate">
+              <el-icon><Refresh /></el-icon>
+              检查所有服务器 Agent 更新
+            </el-button>
+            <el-button type="primary" @click="applyAgentUpdateSettings" :loading="applyingAgentSettings">
+              应用到所有服务器
+            </el-button>
+          </div>
         </el-card>
       </el-tab-pane>
 
@@ -776,6 +829,13 @@ const defaultSettings = {
     autoCheck: true,
     autoDownload: false,
     channel: 'stable'
+  },
+  // Agent 自动更新
+  agentUpdate: {
+    autoUpdate: false,
+    channel: 'stable',
+    checkInterval: 3600,
+    notifyOnly: true
   },
   // 数据备份
   backup: {

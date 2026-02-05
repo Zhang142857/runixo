@@ -3,7 +3,7 @@
     <!-- 头像 -->
     <div class="message-avatar">
       <el-icon v-if="message.role === 'user'" class="user-icon"><User /></el-icon>
-      <el-icon v-else class="ai-icon"><Magic /></el-icon>
+      <el-icon v-else class="ai-icon"><MagicStick /></el-icon>
     </div>
 
     <!-- 消息内容 -->
@@ -55,7 +55,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { User, Magic, CopyDocument, Refresh } from '@element-plus/icons-vue'
+import { User, MagicStick, CopyDocument, Refresh } from '@element-plus/icons-vue'
 import ToolExecution from './ToolExecution.vue'
 import TaskPlan from './TaskPlan.vue'
 import type { Message, ToolCallRecord, TaskPlan as TaskPlanType } from '@/stores/ai'

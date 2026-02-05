@@ -204,7 +204,7 @@ const envDefinitions = ref<EnvItem[]>([
   },
   {
     name: 'PM2',
-    iconName: 'nodejs',
+    iconName: 'pm2',
     color: '#2b037a',
     description: 'Node.js 进程管理器',
     checkCmd: 'pm2 -v 2>/dev/null',
@@ -352,7 +352,7 @@ const envDefinitions = ref<EnvItem[]>([
   },
   {
     name: 'Certbot',
-    iconName: 'nodejs',
+    iconName: 'certbot',
     color: '#003a70',
     description: 'SSL 证书工具',
     checkCmd: 'certbot --version 2>/dev/null | grep -oP "\\d+\\.\\d+\\.\\d+"',
