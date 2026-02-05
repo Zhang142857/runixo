@@ -216,25 +216,24 @@ get_latest_version() {
 # 下载二进制文件
 download_binary() {
     local os=$1 arch=$2 version=$3
-    local filename="${BINARY_NAME}_${os}_${arch}.tar.gz"
-    local url="https://github.com/${GITHUB_REPO}/releases/download/${version}/${filename}"
     
-    log_step "下载 ServerHub Agent ${version}..."
-    log_info "文件: ${filename}"
+    log_step "下载 ServerHub Agent..."
     
     local tmp_dir=$(mktemp -d)
     trap "rm -rf ${tmp_dir}" EXIT
+    
+    # 直接从仓库下载编译好的二进制文件
+    local url="https://raw.githubusercontent.com/${GITHUB_REPO}/main/agent/serverhub-agent-linux"
     
     echo ""
     echo -e "  ${CYAN}下载地址:${NC} ${url}"
     echo ""
     
     # 使用 curl 显示进度条
-    if ! curl -fL --progress-bar -o "${tmp_dir}/${filename}" "${url}" 2>&1; then
+    if ! curl -fL --progress-bar -o "${tmp_dir}/${BINARY_NAME}" "${url}" 2>&1; then
         echo ""
         log_error "下载失败"
         log_info "可能的原因:"
-        echo -e "  ${CYAN}>${NC} 版本 ${version} 不存在"
         echo -e "  ${CYAN}>${NC} 网络连接问题"
         echo -e "  ${CYAN}>${NC} GitHub 访问受限"
         echo ""
@@ -243,13 +242,6 @@ download_binary() {
         exit 1
     fi
     echo ""
-    
-    log_info "解压文件..."
-    if ! tar -xzf "${tmp_dir}/${filename}" -C "${tmp_dir}" 2>&1; then
-        log_error "解压失败，文件可能已损坏"
-        exit 1
-    fi
-    log_success "解压完成"
     
     log_info "安装到 ${INSTALL_DIR}..."
     mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/"

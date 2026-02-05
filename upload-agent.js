@@ -4,7 +4,7 @@ const { join } = require('path')
 const fs = require('fs')
 
 const PROTO_PATH = join(__dirname, 'proto', 'agent.proto')
-const TOKEN = 'fcb75bf947ca1f3808ba5fb09d04033eb53e03187e2f81d776e362fcd343232a'
+const TOKEN = '9ea1bc5f459e08cab5be5c777b3bf7f13922c008ae68dd1a4362533f8a3cf2ac'
 
 async function main() {
   const packageDefinition = await protoLoader.load(PROTO_PATH, {
