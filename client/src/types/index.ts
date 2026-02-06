@@ -411,8 +411,14 @@ export interface ElectronAPI {
   }
   ai: {
     chat: (message: string, context?: AIContext) => Promise<string>
+    executeAgent: (message: string, context?: AIContext) => Promise<any>
+    getAvailableTools: () => Promise<any[]>
     setProvider: (provider: string, config: AIProviderConfig) => Promise<boolean>
+    getProviders: () => Promise<any[]>
     onStream: (callback: (chunk: string) => void) => () => void
+    onAgentStep: (callback: (step: any) => void) => () => void
+    onAgentPlan: (callback: (plan: any) => void) => () => void
+    onAgentConfirm: (callback: (data: any) => void) => () => void
   }
   dialog: {
     openFile: (options: OpenDialogOptions) => Promise<OpenDialogResult>
@@ -470,6 +476,55 @@ export interface ElectronAPI {
       headers?: Record<string, string>
       error?: string
     }>
+  }
+  docker: {
+    searchHub: (serverId: string, query: string, pageSize?: number, page?: number) => Promise<any>
+    proxyRequest: (serverId: string, options: any) => Promise<any>
+  }
+  plugin: {
+    list: () => Promise<any[]>
+    install: (pluginId: string, source?: string) => Promise<any>
+    uninstall: (pluginId: string) => Promise<any>
+    enable: (pluginId: string) => Promise<any>
+    disable: (pluginId: string) => Promise<any>
+    getConfig: (pluginId: string) => Promise<Record<string, unknown>>
+    setConfig: (pluginId: string, config: Record<string, unknown>) => Promise<any>
+    getMenus: () => Promise<any[]>
+    getRoutes: () => Promise<any[]>
+    getMarketPlugins: () => Promise<any[]>
+    onMenuRegister: (callback: (data: any) => void) => () => void
+    onMenuUnregister: (callback: (data: any) => void) => () => void
+    onNotification: (callback: (data: any) => void) => () => void
+  }
+  backup: {
+    getStrategies: () => Promise<any[]>
+    createStrategy: (strategy: any) => Promise<any>
+    updateStrategy: (id: string, updates: any) => Promise<any>
+    deleteStrategy: (id: string) => Promise<any>
+    executeBackup: (strategyId: string) => Promise<any>
+    getRecords: (strategyId?: string) => Promise<any[]>
+    restoreBackup: (recordId: string, options?: any) => Promise<any>
+    deleteRecord: (recordId: string) => Promise<any>
+  }
+  task: {
+    getTasks: () => Promise<any[]>
+    createTask: (task: any) => Promise<any>
+    updateTask: (id: string, updates: any) => Promise<any>
+    deleteTask: (id: string) => Promise<any>
+    enableTask: (id: string) => Promise<any>
+    disableTask: (id: string) => Promise<any>
+    executeTask: (id: string) => Promise<any>
+    getHistory: (taskId?: string) => Promise<any[]>
+    getStats: () => Promise<any>
+  }
+  appStore: {
+    getTemplates: () => Promise<any[]>
+    deploy: (options: any) => Promise<any>
+    getInstalled: () => Promise<any[]>
+    startApp: (instanceId: string) => Promise<any>
+    stopApp: (instanceId: string) => Promise<any>
+    uninstallApp: (instanceId: string) => Promise<any>
+    getStats: () => Promise<any>
   }
 }
 

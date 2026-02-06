@@ -175,7 +175,7 @@ import TaskPlan from '@/components/ai/TaskPlan.vue'
 import {
   Plus, Delete, ChatDotRound, Operation, MagicStick, Promotion, Monitor, Warning,
   Loading, Box, Document, Setting, Cpu, FolderOpened, CircleCheck, CircleClose,
-  Upload, Search, Shield, Connection
+  Upload, Search, Connection
 } from '@element-plus/icons-vue'
 
 const serverStore = useServerStore()
@@ -209,7 +209,7 @@ const toolIconMap: Record<string, unknown> = {
   // 部署工具
   deploy_application: Upload, create_nginx_config: Setting, list_deployable_apps: Box,
   // 监控诊断工具
-  diagnose_system: Monitor, analyze_logs: Search, security_scan: Shield, check_port: Connection
+  diagnose_system: Monitor, analyze_logs: Search, security_scan: Lock, check_port: Connection
 }
 
 function getToolIcon(name: string) { return toolIconMap[name] || Monitor }

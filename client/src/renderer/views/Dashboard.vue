@@ -95,9 +95,8 @@
         </div>
       </div>
       <div class="quick-links">
-        <div class="ql-item" v-for="(link, index) in quickLinks" :key="link.path" 
+        <div class="ql-item animate-scale-in" v-for="(link, index) in quickLinks" :key="link.path" 
              :style="{ animationDelay: `${0.4 + index * 0.05}s` }"
-             class="animate-scale-in"
              @click="$router.push(link.path)">
           <el-icon :size="20"><component :is="link.icon" /></el-icon>
           <span>{{ link.label }}</span>

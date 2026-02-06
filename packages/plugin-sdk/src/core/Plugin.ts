@@ -26,9 +26,44 @@ export abstract class Plugin {
 
   /**
    * 插件加载时调用（插件首次安装或应用启动时）
+   * 自动注册通过装饰器声明的工具、命令和事件监听器
    */
   async onLoad(): Promise<void> {
-    // 子类可选实现
+    this.autoRegister()
+  }
+
+  /**
+   * 自动注册装饰器声明的工具/命令/事件
+   */
+  private autoRegister(): void {
+    const proto = Object.getPrototypeOf(this)
+
+    // 注册 @Tool 装饰器标记的方法
+    if (proto.__tools) {
+      for (const tool of proto.__tools) {
+        this.registerTool({
+          ...tool,
+          handler: tool.handler.bind(this)
+        })
+      }
+    }
+
+    // 注册 @Command 装饰器标记的方法
+    if (proto.__commands) {
+      for (const cmd of proto.__commands) {
+        this.registerCommand({
+          ...cmd,
+          handler: cmd.handler.bind(this)
+        })
+      }
+    }
+
+    // 注册 @OnEvent 装饰器标记的方法
+    if (proto.__eventListeners) {
+      for (const listener of proto.__eventListeners) {
+        this.context.events.on(listener.event, listener.handler.bind(this))
+      }
+    }
   }
 
   /**

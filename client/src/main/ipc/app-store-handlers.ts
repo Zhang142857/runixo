@@ -3,7 +3,7 @@
  */
 
 import { appDeploymentEngine } from '../app-store/deployment-engine'
-import { getAllAppTemplates } from '../app-store/templates'
+import { appTemplates } from '../app-store/templates'
 import type { DeployOptions, AppInstance } from '../../types/app-store'
 import { GrpcClient } from '../grpc/client'
 import * as fs from 'fs/promises'
@@ -51,7 +51,7 @@ export function setupAppStoreHandlers(serverConnections: Map<string, GrpcClient>
 
   // 获取所有应用模板
   ipcMain.handle('appStore:getTemplates', async () => {
-    return getAllAppTemplates()
+    return appTemplates
   })
 
   // 部署应用
