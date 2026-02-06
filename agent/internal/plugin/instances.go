@@ -125,12 +125,12 @@ func (p *CloudflarePlugin) Start(ctx context.Context, config map[string]any) err
 	secConfig.DataPath = filepath.Join(p.pluginsDir, p.pluginID, "data")
 
 	if cfConfig.BlockThreshold > 0 {
-		secConfig.Detector.ThreatThreshold = cfConfig.BlockThreshold
+		secConfig.Detector.BlockThreshold = cfConfig.BlockThreshold
 	}
 	if cfConfig.BlockDuration > 0 {
-		secConfig.Blocker.DefaultDuration = cfConfig.BlockDuration
+		secConfig.Blocker.DefaultBlockDuration = cfConfig.BlockDuration
 	}
-	secConfig.Blocker.AutoBlock = cfConfig.AutoBlock
+	secConfig.Blocker.AutoBlockEnabled = cfConfig.AutoBlock
 
 	manager, err := cloudflare.NewSecurityManager(secConfig)
 	if err != nil {
