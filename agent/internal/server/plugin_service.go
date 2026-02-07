@@ -133,7 +133,7 @@ func (s *PluginServer) SetPluginConfig(ctx context.Context, req *pb.SetPluginCon
 }
 
 // GetPluginStatus 获取插件状态
-func (s *PluginServer) GetPluginStatus(ctx context.Context, req *pb.PluginRequest) (*pb.PluginStatusMsg, error) {
+func (s *PluginServer) GetPluginStatus(ctx context.Context, req *pb.PluginRequest) (*pb.PluginStatus, error) {
 	if req.PluginId == "" {
 		return nil, status.Error(codes.InvalidArgument, "插件 ID 不能为空")
 	}
@@ -143,7 +143,7 @@ func (s *PluginServer) GetPluginStatus(ctx context.Context, req *pb.PluginReques
 		return nil, status.Errorf(codes.NotFound, "获取状态失败: %v", err)
 	}
 
-	return &pb.PluginStatusMsg{
+	return &pb.PluginStatus{
 		PluginId: pluginStatus.PluginID,
 		State:    convertPluginState(pluginStatus.State),
 		Running:  pluginStatus.Running,
