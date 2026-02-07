@@ -290,7 +290,7 @@ const serverStore = useServerStore()
 const showAddServer = ref(false)
 const adding = ref(false)
 const addMode = ref('manual')
-const newServer = ref({ name: '', host: '', port: 9527, token: '', useTls: false })
+const newServer = ref({ name: '', host: '', port: 9527, token: '', useTls: true })
 
 const sshStep = ref<'form' | 'progress'>('form')
 const sshInstalling = ref(false)
@@ -497,7 +497,7 @@ async function startSshInstall() {
       sshLogs.value.push({ text: '\n🎉 安装成功！正在添加服务器...', type: 'success' })
       const id = serverStore.addServer({
         name: f.name, host: f.host, port: result.port,
-        token: result.token, useTls: false
+        token: result.token, useTls: true
       })
       ElMessage.success('Agent 安装成功，服务器已添加')
       try { 
@@ -572,7 +572,7 @@ async function addServer() {
     await serverStore.connectServer(id)
     ElMessage.success('服务器添加成功')
     showAddServer.value = false
-    newServer.value = { name: '', host: '', port: 9527, token: '', useTls: false }
+    newServer.value = { name: '', host: '', port: 9527, token: '', useTls: true }
     startMetrics(id)
   } catch (e) {
     ElMessage.error('连接失败: ' + (e as Error).message)

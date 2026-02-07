@@ -71,7 +71,9 @@ export class GrpcClient extends EventEmitter {
 
     const proto = grpc.loadPackageDefinition(packageDefinition) as any
     const credentials = this.config.useTls
-      ? grpc.credentials.createSsl()
+      ? grpc.credentials.createSsl(null, null, null, {
+          checkServerIdentity: () => undefined // 信任自签名证书
+        })
       : grpc.credentials.createInsecure()
 
     const address = `${this.config.host}:${this.config.port}`

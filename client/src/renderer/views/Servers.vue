@@ -435,7 +435,7 @@ const newServer = ref({
   port: 9527,
   token: '',
   group: '默认',
-  useTls: false
+  useTls: true
 })
 
 const editServer = ref({
@@ -445,7 +445,7 @@ const editServer = ref({
   port: 9527,
   token: '',
   group: '默认',
-  useTls: false
+  useTls: true
 })
 
 const serversByGroup = computed(() => serverStore.serversByGroup)
@@ -539,7 +539,7 @@ async function startSshInstall() {
       sshLogs.value.push({ text: '\n🎉 安装成功！正在添加服务器...', type: 'success' })
       serverStore.addServer({
         name: f.name, host: f.host, port: result.port,
-        token: result.token, group: f.group, useTls: false
+        token: result.token, group: f.group, useTls: true
       })
       ElMessage.success('Agent 安装成功，服务器已添加')
       // 自动连接
@@ -576,7 +576,7 @@ function openAddDialog() {
     port: 9527,
     token: '',
     group: filterGroup.value || '默认',
-    useTls: false
+    useTls: true
   }
   showAddDialog.value = true
 }
