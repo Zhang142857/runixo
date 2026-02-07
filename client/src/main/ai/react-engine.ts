@@ -259,7 +259,7 @@ export class ReActEngine extends EventEmitter {
         }
       } else {
         // 没有工具调用，AI 给出最终回答
-        finalResponse = response.content
+        finalResponse = response.content || '(AI returned empty content)'
 
         const answerStep: ReActStep = {
           type: 'answer',
