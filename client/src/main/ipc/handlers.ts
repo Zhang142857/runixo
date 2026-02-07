@@ -587,6 +587,12 @@ export function setupIpcHandlers() {
     })
   })
 
+  ipcMain.handle('ai:streamChat', async (event, message: string, context?: AIContext) => {
+    return await aiGateway.streamChat(message, context, (delta) => {
+      event.sender.send('ai:stream:delta', delta)
+    })
+  })
+
   ipcMain.handle('ai:executeAgent', async (event, message: string, context?: AIContext) => {
     // 转发 Agent 事件到渲染进程
     const onStep = (step: any) => event.sender.send('ai:agent:step', step)

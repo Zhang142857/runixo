@@ -196,6 +196,13 @@ const electronAPI: ElectronAPI = {
   ai: {
     chat: (message: string, context?: AIContext): Promise<string> =>
       ipcRenderer.invoke('ai:chat', message, context),
+    streamChat: (message: string, context?: AIContext): Promise<string> =>
+      ipcRenderer.invoke('ai:streamChat', message, context),
+    onStreamDelta: (callback: (delta: { type: string; content: string }) => void): (() => void) => {
+      const handler = (_: any, delta: any) => callback(delta)
+      ipcRenderer.on('ai:stream:delta', handler)
+      return () => ipcRenderer.removeListener('ai:stream:delta', handler)
+    },
     executeAgent: (message: string, context?: AIContext): Promise<{
       response: string
       steps: Array<{ type: string; content: string; timestamp: Date; toolCall?: any; toolResult?: any }>

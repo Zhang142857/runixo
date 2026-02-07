@@ -304,6 +304,137 @@ export class AIGateway extends EventEmitter implements AIProvider {
   }
 
   /**
+   * 流式聊天 — SSE 流式输出 + 思考过程解析
+   * onDelta: { type: 'content'|'thinking'|'done'|'error', content: string }
+   */
+  async streamChat(
+    message: string,
+    context: AIContext | undefined,
+    onDelta: (delta: { type: string; content: string }) => void
+  ): Promise<string> {
+    const messages: ChatMessage[] = [
+      { role: 'system', content: context?.systemPrompt || this.systemPrompt },
+      ...(context?.history || []),
+      { role: 'user', content: message }
+    ]
+
+    if (!this.isOpenAICompatible() && this.config.provider !== 'ollama') {
+      // Claude/Gemini 暂不支持流式，走普通 chat
+      const result = await this.chat(message, context)
+      onDelta({ type: 'content', content: result })
+      onDelta({ type: 'done', content: '' })
+      return result
+    }
+
+    const url = this.config.provider === 'ollama'
+      ? `${this.config.baseUrl || 'http://localhost:11434'}/api/chat`
+      : `${this.getOpenAICompatibleBaseUrl()}/v1/chat/completions`
+
+    const body: any = this.config.provider === 'ollama'
+      ? { model: this.config.model, messages: messages.map(m => ({ role: m.role, content: m.content })), stream: true }
+      : { model: this.config.model || 'gpt-4', messages, stream: true }
+
+    const headers: any = this.config.provider === 'ollama'
+      ? { 'Content-Type': 'application/json' }
+      : { 'Authorization': `Bearer ${this.config.apiKey}`, 'Content-Type': 'application/json' }
+
+    let fullContent = ''
+    let fullThinking = ''
+    let inThinkTag = false // 追踪 <think> 标签状态
+
+    try {
+      const response = await this.httpClient.post(url, body, {
+        headers,
+        responseType: 'stream',
+        timeout: 300000
+      })
+
+      return await new Promise<string>((resolve, reject) => {
+        let buffer = ''
+        response.data.on('data', (chunk: Buffer) => {
+          buffer += chunk.toString()
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || '' // 保留不完整的行
+
+          for (const line of lines) {
+            if (this.config.provider === 'ollama') {
+              // Ollama: 每行一个 JSON
+              try {
+                const json = JSON.parse(line)
+                if (json.message?.content) {
+                  const text = json.message.content
+                  const parsed = this.parseThinkingContent(text, inThinkTag)
+                  inThinkTag = parsed.inThinkTag
+                  if (parsed.thinking) { fullThinking += parsed.thinking; onDelta({ type: 'thinking', content: parsed.thinking }) }
+                  if (parsed.content) { fullContent += parsed.content; onDelta({ type: 'content', content: parsed.content }) }
+                }
+                if (json.done) { onDelta({ type: 'done', content: '' }); resolve(fullContent) }
+              } catch {}
+              continue
+            }
+
+            // OpenAI 兼容: SSE 格式
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6).trim()
+            if (data === '[DONE]') { onDelta({ type: 'done', content: '' }); resolve(fullContent); return }
+
+            try {
+              const json = JSON.parse(data)
+              const delta = json.choices?.[0]?.delta
+
+              // 1. reasoning_content 字段（DeepSeek-R1、部分硅基流动模型）
+              if (delta?.reasoning_content) {
+                fullThinking += delta.reasoning_content
+                onDelta({ type: 'thinking', content: delta.reasoning_content })
+              }
+
+              // 2. 普通 content（可能包含 <think> 标签）
+              if (delta?.content) {
+                const parsed = this.parseThinkingContent(delta.content, inThinkTag)
+                inThinkTag = parsed.inThinkTag
+                if (parsed.thinking) { fullThinking += parsed.thinking; onDelta({ type: 'thinking', content: parsed.thinking }) }
+                if (parsed.content) { fullContent += parsed.content; onDelta({ type: 'content', content: parsed.content }) }
+              }
+            } catch {}
+          }
+        })
+
+        response.data.on('end', () => { onDelta({ type: 'done', content: '' }); resolve(fullContent) })
+        response.data.on('error', (err: Error) => { onDelta({ type: 'error', content: err.message }); reject(err) })
+      })
+    } catch (err: any) {
+      const status = err.response?.status
+      const data = err.response?.data
+      const detail = (typeof data === 'string' ? data : data?.error?.message || data?.message) || err.message
+      const msg = `AI 请求失败 [${this.config.provider}] model=${body.model} → ${status}: ${detail}`
+      onDelta({ type: 'error', content: msg })
+      throw new Error(msg)
+    }
+  }
+
+  /** 解析 <think>...</think> 标签，返回思考内容和正文内容 */
+  private parseThinkingContent(text: string, inThinkTag: boolean): { thinking: string; content: string; inThinkTag: boolean } {
+    let thinking = '', content = ''
+    let remaining = text
+    while (remaining.length > 0) {
+      if (inThinkTag) {
+        const endIdx = remaining.indexOf('</think>')
+        if (endIdx === -1) { thinking += remaining; remaining = ''; break }
+        thinking += remaining.slice(0, endIdx)
+        remaining = remaining.slice(endIdx + 8)
+        inThinkTag = false
+      } else {
+        const startIdx = remaining.indexOf('<think>')
+        if (startIdx === -1) { content += remaining; remaining = ''; break }
+        content += remaining.slice(0, startIdx)
+        remaining = remaining.slice(startIdx + 7)
+        inThinkTag = true
+      }
+    }
+    return { thinking, content, inThinkTag }
+  }
+
+  /**
    * 实现 AIProvider 接口的 chat 方法
    */
   async chatWithTools(

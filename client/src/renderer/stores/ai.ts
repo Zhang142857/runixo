@@ -23,6 +23,7 @@ export interface ToolCallRecord {
 export interface ReActStep {
   type: 'think' | 'act' | 'observe' | 'answer'
   content: string
+  thinking?: string
   timestamp: Date
   toolCall?: {
     name: string
@@ -57,6 +58,7 @@ export interface Message {
   id: string
   role: 'user' | 'assistant' | 'system'
   content: string
+  thinking?: string
   timestamp: Date
   toolCalls?: ToolCallRecord[]
   steps?: ReActStep[]
@@ -329,6 +331,40 @@ export const useAIStore = defineStore('ai', () => {
     streamingContent.value = ''
   }
 
+  // 创建流式助手消息（空消息，后续追加内容）
+  function createStreamingMessage(): Message {
+    if (!currentConversation.value) createConversation()
+    const message: Message = {
+      id: generateId(), role: 'assistant', content: '', thinking: '',
+      timestamp: new Date(), isStreaming: true
+    }
+    currentConversation.value!.messages.push(message)
+    return message
+  }
+
+  // 追加流式内容到最后一条消息
+  function appendToLastMessage(type: 'content' | 'thinking', text: string): void {
+    if (!currentConversation.value) return
+    const msgs = currentConversation.value.messages
+    const last = msgs[msgs.length - 1]
+    if (last?.role === 'assistant') {
+      if (type === 'thinking') last.thinking = (last.thinking || '') + text
+      else last.content += text
+    }
+  }
+
+  // 结束流式消息
+  function finalizeStreamingMessage(): void {
+    if (!currentConversation.value) return
+    const msgs = currentConversation.value.messages
+    const last = msgs[msgs.length - 1]
+    if (last?.role === 'assistant') {
+      last.isStreaming = false
+      if (!last.thinking) delete last.thinking
+    }
+    saveToStorage()
+  }
+
   // 添加 ReAct 步骤
   function addStep(step: ReActStep): void {
     currentSteps.value.push(step)
@@ -544,6 +580,9 @@ export const useAIStore = defineStore('ai', () => {
     updateProcessingStatus,
     appendStreamingContent,
     endProcessing,
+    createStreamingMessage,
+    appendToLastMessage,
+    finalizeStreamingMessage,
     addStep,
     setPlan,
     updatePlan,
