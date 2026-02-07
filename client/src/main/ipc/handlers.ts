@@ -1,6 +1,6 @@
 import { ipcMain, dialog, shell, net } from 'electron'
 import { GrpcClient } from '../grpc/client'
-import { AIGateway } from '../ai/gateway'
+import { AIGateway, AIContext } from '../ai/gateway'
 import * as secureStorage from '../security/secureStorage'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -581,36 +581,14 @@ export function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('ai:chat', async (event, message: string, context?: AIContext) => {
-    return await aiGateway.chat(message, context, (chunk) => {
-      event.sender.send('ai:stream', chunk)
-    })
+  ipcMain.handle('ai:chat', async (_event, message: string, context?: AIContext) => {
+    return await aiGateway.chat(message, context)
   })
 
   ipcMain.handle('ai:streamChat', async (event, message: string, context?: AIContext) => {
     return await aiGateway.streamChat(message, context, (delta) => {
       event.sender.send('ai:stream:delta', delta)
     })
-  })
-
-  ipcMain.handle('ai:executeAgent', async (event, message: string, context?: AIContext) => {
-    // 转发 Agent 事件到渲染进程
-    const onStep = (step: any) => event.sender.send('ai:agent:step', step)
-    const onPlan = (plan: any) => event.sender.send('ai:agent:plan', plan)
-    const onConfirm = (data: any) => event.sender.send('ai:agent:confirm', data)
-
-    aiGateway.on('agent:step', onStep)
-    aiGateway.on('agent:plan', onPlan)
-    aiGateway.on('agent:confirm', onConfirm)
-
-    try {
-      const result = await aiGateway.executeAgent(message, context || {})
-      return result
-    } finally {
-      aiGateway.off('agent:step', onStep)
-      aiGateway.off('agent:plan', onPlan)
-      aiGateway.off('agent:confirm', onConfirm)
-    }
   })
 
   ipcMain.handle('ai:getAvailableTools', async () => {
@@ -1244,9 +1222,4 @@ interface ServerConfig {
   port: number
   token: string
   useTls?: boolean
-}
-
-interface AIContext {
-  serverId?: string
-  history?: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
 }

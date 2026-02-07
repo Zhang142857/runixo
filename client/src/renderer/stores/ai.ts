@@ -53,12 +53,23 @@ export interface TaskStep {
   result?: string
 }
 
+// 消息部分（内联渲染）
+export interface MessagePart {
+  type: 'text' | 'thinking' | 'tool-call'
+  content?: string
+  toolName?: string
+  args?: Record<string, unknown>
+  result?: unknown
+  status?: 'calling' | 'done' | 'error'
+}
+
 // 消息类型
 export interface Message {
   id: string
   role: 'user' | 'assistant' | 'system'
   content: string
   thinking?: string
+  parts: MessagePart[]
   timestamp: Date
   toolCalls?: ToolCallRecord[]
   steps?: ReActStep[]
@@ -239,6 +250,7 @@ export const useAIStore = defineStore('ai', () => {
       id: generateId(),
       role: 'user',
       content,
+      parts: [],
       timestamp: new Date()
     }
 
@@ -270,6 +282,7 @@ export const useAIStore = defineStore('ai', () => {
       id: generateId(),
       role: 'assistant',
       content,
+      parts: [],
       timestamp: new Date(),
       toolCalls: options?.toolCalls,
       steps: options?.steps,
@@ -335,21 +348,57 @@ export const useAIStore = defineStore('ai', () => {
   function createStreamingMessage(): Message {
     if (!currentConversation.value) createConversation()
     const message: Message = {
-      id: generateId(), role: 'assistant', content: '', thinking: '',
-      timestamp: new Date(), isStreaming: true
+      id: generateId(), role: 'assistant', content: '',
+      parts: [], timestamp: new Date(), isStreaming: true
     }
     currentConversation.value!.messages.push(message)
     return message
   }
 
   // 追加流式内容到最后一条消息
-  function appendToLastMessage(type: 'content' | 'thinking', text: string): void {
+  function appendToLastMessage(delta: { type: string; content?: string; toolName?: string; args?: any; result?: any }): void {
     if (!currentConversation.value) return
     const msgs = currentConversation.value.messages
     const last = msgs[msgs.length - 1]
-    if (last?.role === 'assistant') {
-      if (type === 'thinking') last.thinking = (last.thinking || '') + text
-      else last.content += text
+    if (!last || last.role !== 'assistant') return
+
+    if (!last.parts) last.parts = []
+    const parts = last.parts
+    const lastPart = parts[parts.length - 1]
+
+    switch (delta.type) {
+      case 'content': {
+        if (lastPart?.type === 'text') {
+          lastPart.content = (lastPart.content || '') + (delta.content || '')
+        } else {
+          parts.push({ type: 'text', content: delta.content || '' })
+        }
+        last.content += delta.content || ''
+        break
+      }
+      case 'thinking': {
+        if (lastPart?.type === 'thinking') {
+          lastPart.content = (lastPart.content || '') + (delta.content || '')
+        } else {
+          parts.push({ type: 'thinking', content: delta.content || '' })
+        }
+        last.thinking = (last.thinking || '') + (delta.content || '')
+        break
+      }
+      case 'tool-call': {
+        parts.push({ type: 'tool-call', toolName: delta.toolName, args: delta.args, status: 'calling' })
+        break
+      }
+      case 'tool-result': {
+        for (let i = parts.length - 1; i >= 0; i--) {
+          if (parts[i].type === 'tool-call' && parts[i].toolName === delta.toolName && parts[i].status === 'calling') {
+            parts[i].result = delta.result
+            parts[i].status = 'done'
+            break
+          }
+        }
+        break
+      }
     }
   }
 
@@ -471,7 +520,8 @@ export const useAIStore = defineStore('ai', () => {
           ...c,
           messages: (c.messages as Record<string, unknown>[]).map((m: Record<string, unknown>) => ({
             ...m,
-            timestamp: new Date(m.timestamp as string)
+            timestamp: new Date(m.timestamp as string),
+            parts: (m as any).parts || []
           })),
           createdAt: new Date(c.createdAt as string),
           updatedAt: new Date(c.updatedAt as string)

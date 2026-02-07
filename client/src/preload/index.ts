@@ -196,19 +196,13 @@ const electronAPI: ElectronAPI = {
   ai: {
     chat: (message: string, context?: AIContext): Promise<string> =>
       ipcRenderer.invoke('ai:chat', message, context),
-    streamChat: (message: string, context?: AIContext): Promise<string> =>
+    streamChat: (message: string, context?: AIContext): Promise<void> =>
       ipcRenderer.invoke('ai:streamChat', message, context),
-    onStreamDelta: (callback: (delta: { type: string; content: string }) => void): (() => void) => {
+    onStreamDelta: (callback: (delta: { type: string; content?: string; toolName?: string; args?: any; result?: any }) => void): (() => void) => {
       const handler = (_: any, delta: any) => callback(delta)
       ipcRenderer.on('ai:stream:delta', handler)
       return () => ipcRenderer.removeListener('ai:stream:delta', handler)
     },
-    executeAgent: (message: string, context?: AIContext): Promise<{
-      response: string
-      steps: Array<{ type: string; content: string; timestamp: Date; toolCall?: any; toolResult?: any }>
-      plan?: { goal: string; steps: Array<{ id: number; description: string; status: string }> }
-      toolCalls: Array<{ name: string; arguments: Record<string, unknown>; result: unknown; success: boolean }>
-    }> => ipcRenderer.invoke('ai:executeAgent', message, context),
     getAvailableTools: (): Promise<Array<{
       name: string
       displayName: string
@@ -220,22 +214,6 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('ai:setProvider', provider, config),
     getProviders: (): Promise<Array<{ id: string; name: string; description: string }>> =>
       ipcRenderer.invoke('ai:getProviders'),
-    onStream: (callback: (chunk: string) => void): (() => void) => {
-      ipcRenderer.on('ai:stream', (_, chunk) => callback(chunk))
-      return () => ipcRenderer.removeAllListeners('ai:stream')
-    },
-    onAgentStep: (callback: (step: any) => void): (() => void) => {
-      ipcRenderer.on('ai:agent:step', (_, step) => callback(step))
-      return () => ipcRenderer.removeAllListeners('ai:agent:step')
-    },
-    onAgentPlan: (callback: (plan: any) => void): (() => void) => {
-      ipcRenderer.on('ai:agent:plan', (_, plan) => callback(plan))
-      return () => ipcRenderer.removeAllListeners('ai:agent:plan')
-    },
-    onAgentConfirm: (callback: (data: any) => void): (() => void) => {
-      ipcRenderer.on('ai:agent:confirm', (_, data) => callback(data))
-      return () => ipcRenderer.removeAllListeners('ai:agent:confirm')
-    }
   },
 
   // 系统对话框

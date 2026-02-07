@@ -34,13 +34,11 @@
         <div class="header-left">
           <div class="ai-badge">AI</div>
           <span class="title">Runixo 助手</span>
-          <el-tag v-if="aiStore.agentMode" type="warning" size="small" effect="dark" round>Agent</el-tag>
         </div>
         <div class="header-right">
           <el-select v-model="selectedServer" placeholder="选择服务器" size="small" clearable style="width: 150px">
             <el-option v-for="server in connectedServers" :key="server.id" :label="server.name" :value="server.id" />
           </el-select>
-          <el-switch v-model="agentModeEnabled" active-text="Agent" inactive-text="Chat" size="small" />
         </div>
       </div>
 
@@ -56,7 +54,7 @@
             </svg>
           </div>
           <h2>你好，我是 Runixo AI 助手</h2>
-          <p class="welcome-desc">{{ agentModeEnabled ? 'Agent 模式已启用，我可以直接操作服务器' : '有什么可以帮你的？' }}</p>
+          <p class="welcome-desc">选择服务器后，我可以直接操作和诊断</p>
           <div class="quick-actions">
             <div v-for="action in quickActions.slice(0, 4)" :key="action.title" class="action-card" @click="sendQuickAction(action.prompt)">
               <el-icon class="action-icon"><component :is="action.icon" /></el-icon>
@@ -81,10 +79,10 @@
             :placeholder="inputPlaceholder" @keydown="handleKeydown" :disabled="aiStore.isProcessing" resize="none" />
           <div class="input-toolbar">
             <div class="toolbar-left">
-              <span v-if="agentModeEnabled && selectedServer" class="server-badge">
+              <span v-if="selectedServer" class="server-badge">
                 <el-icon><Monitor /></el-icon> {{ getServerName(selectedServer) }}
               </span>
-              <span v-else-if="agentModeEnabled" class="server-badge warn">
+              <span v-else-if="false" class="server-badge warn">
                 <el-icon><Warning /></el-icon> 请选择服务器
               </span>
             </div>
@@ -99,12 +97,12 @@
     </div>
 
     <!-- 右侧工具面板 -->
-    <div class="tools-panel" v-if="agentModeEnabled">
+    <div class="tools-panel" v-if="selectedServer">
       <div class="panel-header"><h3>可用工具</h3></div>
       <div class="tools-list">
         <div v-for="(tools, category) in aiStore.toolsByCategory" :key="category" class="tool-category">
           <div class="category-title">{{ categoryNames[category] || category }}</div>
-          <div v-for="tool in tools" :key="tool.name" class="tool-item" :class="{ disabled: !selectedServer, dangerous: tool.dangerous }">
+          <div v-for="tool in tools" :key="tool.name" class="tool-item" :class="{ dangerous: tool.dangerous }">
             <el-icon><component :is="getToolIcon(tool.name)" /></el-icon>
             <div class="tool-info">
               <div class="tool-name">{{ tool.displayName }}</div>
@@ -145,13 +143,12 @@ const serverStore = useServerStore()
 const aiStore = useAIStore()
 
 const selectedServer = ref<string | null>(serverStore.currentServerId)
-const agentModeEnabled = ref(true)
 const inputMessage = ref('')
 const messagesRef = ref<HTMLElement | null>(null)
 let cleanupStreamListener: (() => void) | null = null
 
 const connectedServers = computed(() => serverStore.connectedServers)
-const inputPlaceholder = computed(() => agentModeEnabled.value ? '输入任务，AI 将自动执行...' : '输入消息...')
+const inputPlaceholder = computed(() => selectedServer.value ? '输入任务，AI 将自动执行...' : '输入消息...')
 
 const categoryNames: Record<string, string> = { system: '系统', docker: 'Docker', file: '文件', network: '网络', database: '数据库', plugin: '插件', deployment: '部署', monitoring: '监控诊断' }
 
@@ -181,7 +178,7 @@ function formatDate(date: Date) {
   return d.toLocaleDateString('zh-CN')
 }
 
-function createNewConversation() { aiStore.createConversation(agentModeEnabled.value, selectedServer.value || undefined) }
+function createNewConversation() { aiStore.createConversation(true, selectedServer.value || undefined) }
 
 async function sendMessage() {
   const content = inputMessage.value.trim()
@@ -190,33 +187,23 @@ async function sendMessage() {
   aiStore.addUserMessage(content)
   inputMessage.value = ''
   scrollToBottom()
-
-  if (agentModeEnabled.value && selectedServer.value) {
-    await processAgentMessage(content)
-  } else {
-    await processStreamChat(content)
-  }
+  await processStreamChat(content)
 }
 
-/** 流式聊天 */
 async function processStreamChat(userMessage: string) {
   aiStore.startProcessing('思考中...')
   aiStore.createStreamingMessage()
   scrollToBottom()
 
-  // 监听流式 delta
-  cleanupStreamListener = window.electronAPI.ai.onStreamDelta((delta) => {
-    if (delta.type === 'thinking') {
-      aiStore.appendToLastMessage('thinking', delta.content)
-    } else if (delta.type === 'content') {
-      aiStore.appendToLastMessage('content', delta.content)
-    }
+  cleanupStreamListener = window.electronAPI.ai.onStreamDelta((delta: any) => {
+    aiStore.appendToLastMessage(delta)
     scrollToBottom()
   })
 
   try {
     await window.electronAPI.ai.streamChat(userMessage, {
-      systemPrompt: '你是 Runixo AI 助手，帮助用户解答服务器管理相关问题。请用中文回答。'
+      serverId: selectedServer.value || undefined,
+      history: aiStore.messages.slice(-20).map(m => ({ role: m.role, content: m.content }))
     })
   } catch (e) {
     const msgs = aiStore.messages
@@ -233,29 +220,7 @@ async function processStreamChat(userMessage: string) {
   }
 }
 
-/** Agent 模式 */
-async function processAgentMessage(userMessage: string) {
-  aiStore.startProcessing('分析任务...')
-  try {
-    const result = await window.electronAPI.ai.executeAgent(userMessage, {
-      serverId: selectedServer.value,
-      agentMode: true,
-      history: aiStore.messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
-    })
-    if (result.plan) aiStore.setPlan(result.plan)
-    const toolCalls = result.toolCalls?.map((tc: any) => ({
-      ...tc, id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      displayName: tc.name, timestamp: new Date(), expanded: false
-    })) || []
-    toolCalls.forEach((tc: any) => aiStore.addExecutionRecord(tc))
-    aiStore.addAssistantMessage(result.response, { toolCalls, steps: result.steps, plan: result.plan })
-  } catch (e) {
-    aiStore.addAssistantMessage(`抱歉，处理请求时出错：${(e as Error).message}`)
-  } finally {
-    aiStore.endProcessing()
-    scrollToBottom()
-  }
-}
+
 
 function sendQuickAction(prompt: string) { inputMessage.value = prompt; sendMessage() }
 
@@ -275,7 +240,6 @@ async function scrollToBottom() {
 }
 
 watch(() => serverStore.currentServerId, (id) => { if (id) selectedServer.value = id })
-watch(agentModeEnabled, (mode) => aiStore.setAgentMode(mode))
 watch(selectedServer, (id) => aiStore.setServerId(id || undefined))
 
 onMounted(async () => {

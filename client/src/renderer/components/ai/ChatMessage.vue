@@ -11,29 +11,59 @@
         <span class="message-time">{{ formatTime(message.timestamp) }}</span>
       </div>
 
-      <!-- 思考过程（可折叠） -->
-      <div v-if="message.thinking" class="thinking-block" :class="{ collapsed: !thinkingExpanded }">
-        <div class="thinking-header" @click="thinkingExpanded = !thinkingExpanded">
-          <el-icon class="thinking-icon"><Loading v-if="message.isStreaming && !message.content" /><Sunny v-else /></el-icon>
-          <span>{{ message.isStreaming && !message.content ? '思考中...' : '思考过程' }}</span>
-          <span class="thinking-toggle">{{ thinkingExpanded ? '收起' : '展开' }}</span>
-        </div>
-        <div v-show="thinkingExpanded" class="thinking-content">{{ message.thinking }}</div>
-      </div>
+      <!-- 按 parts 顺序渲染（新消息） -->
+      <template v-if="message.parts?.length">
+        <template v-for="(part, i) in message.parts" :key="i">
+          <!-- 思考过程 -->
+          <div v-if="part.type === 'thinking'" class="thinking-block" :class="{ collapsed: !thinkingExpanded }">
+            <div class="thinking-header" @click="thinkingExpanded = !thinkingExpanded">
+              <el-icon class="thinking-icon"><Loading v-if="message.isStreaming && isLastPart(i)" /><Sunny v-else /></el-icon>
+              <span>{{ message.isStreaming && isLastPart(i) ? '思考中...' : '思考过程' }}</span>
+              <span class="thinking-toggle">{{ thinkingExpanded ? '收起' : '展开' }}</span>
+            </div>
+            <div v-show="thinkingExpanded" class="thinking-content">{{ part.content }}</div>
+          </div>
 
-      <!-- 消息正文 -->
-      <div v-if="message.content" class="message-content" v-html="renderedContent"></div>
+          <!-- 文本内容 -->
+          <div v-else-if="part.type === 'text'" class="message-content" v-html="renderMarkdown(part.content || '')"></div>
+
+          <!-- 工具调用（内联） -->
+          <div v-else-if="part.type === 'tool-call'" class="inline-tool-call" :class="part.status">
+            <div class="tool-header" @click="togglePartExpand(i)">
+              <el-icon class="tool-icon"><Loading v-if="part.status === 'calling'" /><CircleCheck v-else-if="part.status === 'done'" /><CircleClose v-else /></el-icon>
+              <span class="tool-name">{{ part.toolName }}</span>
+              <span class="tool-status">{{ part.status === 'calling' ? '执行中...' : part.status === 'done' ? '完成' : '失败' }}</span>
+              <el-icon class="expand-icon"><ArrowDown v-if="!expandedParts[i]" /><ArrowUp v-else /></el-icon>
+            </div>
+            <div v-if="expandedParts[i]" class="tool-detail">
+              <div v-if="part.args" class="tool-section">
+                <span class="section-label">参数</span>
+                <pre>{{ JSON.stringify(part.args, null, 2) }}</pre>
+              </div>
+              <div v-if="part.result" class="tool-section">
+                <span class="section-label">结果</span>
+                <pre>{{ typeof part.result === 'string' ? part.result : JSON.stringify(part.result, null, 2) }}</pre>
+              </div>
+            </div>
+          </div>
+        </template>
+      </template>
+
+      <!-- 兼容旧消息（无 parts） -->
+      <template v-else>
+        <div v-if="message.thinking" class="thinking-block" :class="{ collapsed: !thinkingExpanded }">
+          <div class="thinking-header" @click="thinkingExpanded = !thinkingExpanded">
+            <el-icon><Sunny /></el-icon>
+            <span>思考过程</span>
+            <span class="thinking-toggle">{{ thinkingExpanded ? '收起' : '展开' }}</span>
+          </div>
+          <div v-show="thinkingExpanded" class="thinking-content">{{ message.thinking }}</div>
+        </div>
+        <div v-if="message.content" class="message-content" v-html="renderMarkdown(message.content)"></div>
+      </template>
 
       <!-- 流式光标 -->
-      <span v-if="message.isStreaming && message.content" class="streaming-cursor">▋</span>
-
-      <!-- 工具调用 -->
-      <div v-if="message.toolCalls?.length" class="tool-calls">
-        <ToolExecution v-for="(tool, i) in message.toolCalls" :key="i" :tool-call="tool" :expanded="tool.expanded" @toggle="toggleToolExpand(i)" />
-      </div>
-
-      <!-- 任务计划 -->
-      <TaskPlan v-if="message.plan" :plan="message.plan" class="message-plan" />
+      <span v-if="message.isStreaming" class="streaming-cursor">▋</span>
 
       <!-- 操作按钮 -->
       <div class="message-actions" v-if="message.role === 'assistant' && !message.isStreaming">
@@ -45,19 +75,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { User, MagicStick, CopyDocument, Refresh, Loading, Sunny } from '@element-plus/icons-vue'
-import ToolExecution from './ToolExecution.vue'
-import TaskPlan from './TaskPlan.vue'
+import { User, MagicStick, CopyDocument, Refresh, Loading, Sunny, CircleCheck, CircleClose, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import type { Message } from '@/stores/ai'
 
 const props = defineProps<{ message: Message }>()
 defineEmits<{ regenerate: [] }>()
 
 const thinkingExpanded = ref(false)
+const expandedParts = reactive<Record<number, boolean>>({})
 
-const renderedContent = computed(() => renderMarkdown(props.message.content))
+function isLastPart(index: number): boolean {
+  return index === (props.message.parts?.length || 0) - 1
+}
+
+function togglePartExpand(index: number) {
+  expandedParts[index] = !expandedParts[index]
+}
 
 function renderMarkdown(content: string): string {
   if (!content) return ''
@@ -80,10 +115,6 @@ function formatTime(date: Date): string {
   return new Date(date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function toggleToolExpand(index: number) {
-  if (props.message.toolCalls?.[index]) props.message.toolCalls[index].expanded = !props.message.toolCalls[index].expanded
-}
-
 function copyContent() {
   navigator.clipboard.writeText(props.message.content)
   ElMessage.success('已复制')
@@ -92,11 +123,7 @@ function copyContent() {
 
 <style lang="scss" scoped>
 .chat-message {
-  display: flex;
-  gap: 14px;
-  padding: 20px 24px;
-  transition: background-color 0.15s;
-
+  display: flex; gap: 14px; padding: 20px 24px; transition: background-color 0.15s;
   &:hover { background-color: rgba(255,255,255,0.02); }
   &:hover .message-actions { opacity: 1; }
 }
@@ -119,7 +146,7 @@ function copyContent() {
 
 // 思考过程块
 .thinking-block {
-  margin-bottom: 10px; border-radius: 10px; overflow: hidden;
+  margin: 8px 0; border-radius: 10px; overflow: hidden;
   border: 1px solid rgba(245, 158, 11, 0.2);
   background: rgba(245, 158, 11, 0.05);
 
@@ -129,7 +156,6 @@ function copyContent() {
     color: #f59e0b; user-select: none;
     &:hover { background: rgba(245, 158, 11, 0.08); }
   }
-  .thinking-icon { font-size: 14px; animation: none; }
   .thinking-toggle { margin-left: auto; font-size: 11px; opacity: 0.7; }
   .thinking-content {
     padding: 0 12px 10px; font-size: 13px; line-height: 1.7;
@@ -139,13 +165,49 @@ function copyContent() {
   &.collapsed .thinking-content { display: none; }
 }
 
+// 内联工具调用
+.inline-tool-call {
+  margin: 10px 0; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border-color); background: var(--bg-secondary);
+
+  &.calling { border-color: rgba(99, 102, 241, 0.3); }
+  &.done { border-color: rgba(16, 185, 129, 0.3); }
+  &.error { border-color: rgba(239, 68, 68, 0.3); }
+
+  .tool-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; cursor: pointer; font-size: 13px;
+    &:hover { background: rgba(255,255,255,0.03); }
+  }
+  .tool-icon {
+    font-size: 14px;
+    .calling & { color: #6366f1; }
+    .done & { color: #10b981; }
+    .error & { color: #ef4444; }
+  }
+  .tool-name { font-weight: 500; color: var(--text-color); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .tool-status { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+  .expand-icon { font-size: 12px; color: var(--text-muted); }
+
+  .tool-detail {
+    border-top: 1px solid var(--border-color); padding: 10px 12px;
+    .tool-section { margin-bottom: 8px; &:last-child { margin-bottom: 0; } }
+    .section-label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+    pre {
+      margin: 0; padding: 8px; border-radius: 6px; background: var(--bg-tertiary);
+      font-size: 12px; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+      font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);
+      max-height: 200px; overflow-y: auto;
+    }
+  }
+}
+
 // 消息正文
 .message-content {
   font-size: 14px; line-height: 1.75; color: var(--text-color); word-break: break-word;
 
   :deep(.code-block) {
-    margin: 10px 0; border-radius: 10px; overflow: hidden;
-    border: 1px solid var(--border-color);
+    margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color);
     .code-header {
       display: flex; justify-content: space-between; align-items: center;
       padding: 6px 14px; background: var(--bg-elevated); font-size: 12px; color: var(--text-secondary);
@@ -158,7 +220,6 @@ function copyContent() {
     pre { margin: 0; padding: 14px; background: var(--bg-tertiary); overflow-x: auto; }
     code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; background: none; padding: 0; }
   }
-
   :deep(code) {
     background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px;
@@ -171,9 +232,6 @@ function copyContent() {
 
 .streaming-cursor { color: var(--primary-color); animation: blink 1s infinite; }
 @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
-
-.tool-calls { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-.message-plan { margin-top: 12px; }
 
 .message-actions {
   display: flex; gap: 4px; margin-top: 8px; opacity: 0; transition: opacity 0.15s;
