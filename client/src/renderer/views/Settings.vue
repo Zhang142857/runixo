@@ -994,8 +994,25 @@ function loadSettings() {
 
 function saveSettings() {
   saving.value = true
-  setTimeout(() => {
+  setTimeout(async () => {
     localStorage.setItem('runixo_settings', JSON.stringify(settings.value))
+    // 同步 AI 设置到主进程
+    try {
+      const ai = settings.value.ai
+      const p = ai.provider
+      const configMap: Record<string, any> = {
+        ollama: { baseUrl: ai.ollamaUrl, model: ai.ollamaModel },
+        openai: { apiKey: ai.openaiKey, baseUrl: ai.openaiBaseUrl, model: ai.openaiModel },
+        claude: { apiKey: ai.claudeKey, model: ai.claudeModel },
+        deepseek: { apiKey: ai.deepseekKey, model: ai.deepseekModel },
+        gemini: { apiKey: ai.geminiKey, model: ai.geminiModel },
+        groq: { apiKey: ai.groqKey, model: ai.groqModel },
+        mistral: { apiKey: ai.mistralKey, model: ai.mistralModel },
+        openrouter: { apiKey: ai.openrouterKey, model: ai.openrouterModel },
+        custom: { apiKey: ai.customKey, baseUrl: ai.customBaseUrl, model: ai.customModel }
+      }
+      await window.electronAPI.ai.setProvider(p, configMap[p] || {})
+    } catch {}
     saving.value = false
     ElMessage.success('设置已保存')
   }, 300)

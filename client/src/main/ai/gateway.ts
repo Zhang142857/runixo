@@ -5,6 +5,9 @@
 
 import axios, { AxiosInstance } from 'axios'
 import { EventEmitter } from 'events'
+import { app } from 'electron'
+import { join } from 'path'
+import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { ToolRegistry, toolRegistry, ToolExecutor, ToolContext } from './tools/registry'
 import { systemTools } from './tools/system'
 import { dockerTools } from './tools/docker'
@@ -73,6 +76,7 @@ export class AIGateway extends EventEmitter implements AIProvider {
     model: 'llama3'
   }
 
+  private configPath: string = ''
   private httpClient: AxiosInstance
   private toolRegistry: ToolRegistry
   private reactEngine: ReActEngine
@@ -91,6 +95,13 @@ export class AIGateway extends EventEmitter implements AIProvider {
 
   constructor() {
     super()
+    // 从文件加载持久化配置
+    try {
+      this.configPath = join(app.getPath('userData'), 'ai-config.json')
+      const saved = JSON.parse(readFileSync(this.configPath, 'utf-8'))
+      if (saved.provider) this.config = { ...this.config, ...saved }
+    } catch {}
+
     this.httpClient = axios.create({
       timeout: 120000
     })
@@ -177,6 +188,8 @@ export class AIGateway extends EventEmitter implements AIProvider {
       provider: provider as AIConfig['provider'],
       ...config
     }
+    // 持久化到文件
+    try { writeFileSync(this.configPath, JSON.stringify(this.config, null, 2)) } catch {}
     return true
   }
 
