@@ -35,6 +35,27 @@ onMounted(() => {
   setTimeout(() => {
     serverStore.autoConnectAll()
   }, 500)
+
+  // 启动时同步 AI 设置到主进程
+  try {
+    const saved = JSON.parse(localStorage.getItem('runixo_settings') || '{}')
+    const ai = saved.ai
+    if (ai?.provider) {
+      const keyMap: Record<string, () => any> = {
+        ollama: () => ({ baseUrl: ai.ollamaUrl, model: ai.ollamaModel }),
+        openai: () => ({ apiKey: ai.openaiKey, baseUrl: ai.openaiBaseUrl, model: ai.openaiModel }),
+        claude: () => ({ apiKey: ai.claudeKey, model: ai.claudeModel }),
+        deepseek: () => ({ apiKey: ai.deepseekKey, model: ai.deepseekModel }),
+        gemini: () => ({ apiKey: ai.geminiKey, model: ai.geminiModel }),
+        groq: () => ({ apiKey: ai.groqKey, model: ai.groqModel }),
+        mistral: () => ({ apiKey: ai.mistralKey, model: ai.mistralModel }),
+        openrouter: () => ({ apiKey: ai.openrouterKey, model: ai.openrouterModel }),
+        custom: () => ({ apiKey: ai.customKey, baseUrl: ai.customBaseUrl, model: ai.customModel })
+      }
+      const cfg = keyMap[ai.provider]?.() || {}
+      window.electronAPI.ai.setProvider(ai.provider, cfg)
+    }
+  } catch {}
 })
 </script>
 
