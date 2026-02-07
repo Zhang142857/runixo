@@ -1,3 +1,10 @@
+import type {
+  PluginConfig, PluginMetadata, ToolDefinition, MenuDefinition,
+  RouteDefinition, CommandDefinition, AgentToolDefinition,
+  HttpOptions, HttpRequestConfig, HttpResponse, DialogOptions, DialogResult,
+  ExecOptions, CommandResult, SystemInfo, EventHandler, ChatOptions, ChatMessage
+} from './types'
+
 /**
  * 插件上下文接口
  * 提供插件可用的所有API

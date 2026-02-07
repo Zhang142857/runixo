@@ -2,7 +2,7 @@
  * HTTP 客户端辅助类
  * 为插件提供便捷的 HTTP 请求封装
  */
-import { HttpResponse, HttpOptions } from '@serverhub/plugin-types'
+import { HttpResponse, HttpOptions } from 'runixo-plugin-types'
 
 export class HttpClient {
   private baseURL: string

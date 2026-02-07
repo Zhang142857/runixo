@@ -72,7 +72,7 @@ func DefaultBlockerConfig() *BlockerConfig {
 		BlockMode:            "block",
 		ProtectedZones:       []string{},
 		WhitelistIPs:         []string{},
-		DataPath:             "/var/lib/serverhub/cloudflare",
+		DataPath:             "/var/lib/runixo/cloudflare",
 	}
 }
 
@@ -122,7 +122,7 @@ func (b *IPBlocker) BlockThreat(threat *Threat) error {
 
 	reason := threat.Description
 	if reason == "" {
-		reason = "Auto-blocked by ServerHub: " + string(threat.Type)
+		reason = "Auto-blocked by Runixo: " + string(threat.Type)
 	}
 
 	// 获取要保护的域名

@@ -1,4 +1,4 @@
-# ✅ ServerHub v2.0 - P0功能开发完成
+# ✅ Runixo v2.0 - P0功能开发完成
 
 **日期**: 2026-02-06  
 **状态**: 全部完成  
@@ -174,7 +174,7 @@ CONTINUATION_PROMPT.md
 
 ## 🎉 总结
 
-成功完成ServerHub v2.0的所有P0核心功能：
+成功完成Runixo v2.0的所有P0核心功能：
 
 1. ✅ 备份管理系统
 2. ✅ 计划任务系统
@@ -187,4 +187,4 @@ CONTINUATION_PROMPT.md
 
 ---
 
-*ServerHub v2.0 - 让服务器管理更简单、更智能、更强大！* 🚀
+*Runixo v2.0 - 让服务器管理更简单、更智能、更强大！* 🚀

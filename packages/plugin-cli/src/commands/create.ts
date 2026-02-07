@@ -11,7 +11,7 @@ interface CreateOptions {
 }
 
 export async function createCommand(name?: string, options?: CreateOptions) {
-  console.log(chalk.blue.bold('\n🚀 ServerHub Plugin Creator\n'))
+  console.log(chalk.blue.bold('\n🚀 Runixo Plugin Creator\n'))
 
   // 如果没有提供名称，询问用户
   if (!name) {
@@ -62,13 +62,13 @@ export async function createCommand(name?: string, options?: CreateOptions) {
       type: 'input',
       name: 'description',
       message: 'Description:',
-      default: `A ServerHub plugin`
+      default: `A Runixo plugin`
     },
     {
       type: 'input',
       name: 'author',
       message: 'Author:',
-      default: 'ServerHub'
+      default: 'Runixo'
     },
     {
       type: 'input',

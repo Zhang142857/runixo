@@ -111,7 +111,7 @@ class PluginRuntime extends EventEmitter {
     const sandbox = {
       ...this.globalContext,
       // 插件专属 API
-      serverhub: api,
+      runixo: api,
       // 模块系统
       module: { exports: {} },
       exports: {},

@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 
-	pb "github.com/serverhub/agent/api/proto"
-	"github.com/serverhub/agent/internal/updater"
+	pb "github.com/runixo/agent/api/proto"
+	"github.com/runixo/agent/internal/updater"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -49,13 +49,13 @@ func (s *UpdateServer) DownloadUpdate(req *pb.UpdateRequest, stream pb.UpdateSer
 	}
 
 	progressChan := make(chan *updater.DownloadProgress, 10)
-	defer close(progressChan)
 
 	// 启动下载
 	errChan := make(chan error, 1)
 	go func() {
 		_, err := s.updater.DownloadUpdate(req.Version, progressChan)
 		errChan <- err
+		close(progressChan)
 	}()
 
 	// 发送进度

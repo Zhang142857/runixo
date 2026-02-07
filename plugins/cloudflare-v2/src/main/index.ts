@@ -1,4 +1,4 @@
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4'
 

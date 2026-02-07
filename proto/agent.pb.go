@@ -2492,7 +2492,7 @@ func (x *ServiceInfo) GetUptime() int64 {
 type ServiceActionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Action        ServiceAction          `protobuf:"varint,2,opt,name=action,proto3,enum=serverhub.ServiceAction" json:"action,omitempty"`
+	Action        ServiceAction          `protobuf:"varint,2,opt,name=action,proto3,enum=runixo.ServiceAction" json:"action,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

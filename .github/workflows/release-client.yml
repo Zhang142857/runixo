@@ -1,4 +1,4 @@
-# ServerHub Client 自动发布工作流
+# Runixo Client 自动发布工作流
 name: Release Client
 
 on:
@@ -135,16 +135,16 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ServerHub Client ${{ steps.version.outputs.VERSION }}
+          name: Runixo Client ${{ steps.version.outputs.VERSION }}
           body: |
-            ## ServerHub Client ${{ steps.version.outputs.VERSION }}
+            ## Runixo Client ${{ steps.version.outputs.VERSION }}
 
             AI-Native 服务器管理平台客户端
 
             ### 下载
-            - Windows: ServerHub Setup *.exe (安装程序) / ServerHub *.exe (便携版)
-            - macOS: ServerHub-*.dmg
-            - Linux: ServerHub-*.AppImage / serverhub-client_*.deb
+            - Windows: Runixo Setup *.exe (安装程序) / Runixo *.exe (便携版)
+            - macOS: Runixo-*.dmg
+            - Linux: Runixo-*.AppImage / runixo-client_*.deb
 
             ### 首次使用
             1. 下载并安装客户端

@@ -106,7 +106,7 @@ func (a *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 		// 跳过认证方法本身
-		if info.FullMethod == "/serverhub.AgentService/Authenticate" {
+		if info.FullMethod == "/runixo.AgentService/Authenticate" {
 			return handler(ctx, req)
 		}
 

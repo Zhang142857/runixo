@@ -115,7 +115,7 @@ func NewManager(pluginsDir string) (*Manager, error) {
 		runtimes:   make(map[string]*PluginRuntime),
 		ctx:        ctx,
 		cancel:     cancel,
-		repoURL:    "https://plugins.serverhub.dev",
+		repoURL:    "https://plugins.runixo.dev",
 	}
 
 	// 加载已安装的插件

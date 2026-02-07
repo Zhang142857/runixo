@@ -138,8 +138,8 @@ class PluginLoader extends EventEmitter {
     this.sources = [
       {
         id: 'official',
-        name: 'ServerHub Official',
-        url: 'https://plugins.serverhub.dev/api/v1',
+        name: 'Runixo Official',
+        url: 'https://plugins.runixo.dev/api/v1',
         type: 'official'
       }
     ]
@@ -336,6 +336,36 @@ class PluginLoader extends EventEmitter {
     this.emit('plugin:installed', pluginId, plugin)
 
     return plugin
+  }
+
+  /**
+   * 从 .shplugin 文件安装插件
+   */
+  async installFromFile(filePath: string): Promise<LoadedPlugin> {
+    if (!filePath.endsWith('.shplugin')) throw new Error('Invalid file: must be .shplugin format')
+    const extractZip = require('extract-zip')
+    const tmpDir = path.join(this.pluginsDir, '_tmp_' + Date.now())
+    fs.mkdirSync(tmpDir, { recursive: true })
+    try {
+      await extractZip(filePath, { dir: tmpDir })
+      const mPath = path.join(tmpDir, 'plugin.json')
+      if (!fs.existsSync(mPath)) throw new Error('Invalid plugin: plugin.json not found in archive')
+      const manifest = await this.loadManifest(mPath)
+      const targetPath = path.join(this.pluginsDir, manifest.id)
+      if (fs.existsSync(targetPath)) {
+        fs.rmSync(targetPath, { recursive: true, force: true })
+        this.plugins.delete(manifest.id)
+      }
+      fs.renameSync(tmpDir, targetPath)
+      const plugin: LoadedPlugin = { manifest, status: 'installed', path: targetPath, installedAt: new Date(), updatedAt: new Date() }
+      this.plugins.set(manifest.id, plugin)
+      this.savePluginStatus(manifest.id)
+      this.emit('plugin:installed', manifest.id, plugin)
+      return plugin
+    } catch (e) {
+      if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true, force: true })
+      throw e
+    }
   }
 
   /**

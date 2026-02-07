@@ -42,7 +42,7 @@
               </defs>
             </svg>
           </div>
-          <h3>你好，我是 ServerHub AI 助手</h3>
+          <h3>你好，我是 Runixo AI 助手</h3>
           <p>我可以帮助你管理服务器、分析日志、生成配置文件等。试试下面的快捷指令开始吧！</p>
           <div class="capability-cards">
             <div class="capability-card" v-for="cap in capabilities" :key="cap.title" @click="useSuggestion(cap.prompt)">
@@ -377,7 +377,7 @@ server {
 
   return `我理解你的问题是关于 "${query}"。
 
-作为 ServerHub AI 助手，我可以帮助你：
+作为 Runixo AI 助手，我可以帮助你：
 - 查看和分析系统状态
 - 管理 Docker 容器
 - 分析日志和排查问题

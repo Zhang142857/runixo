@@ -467,6 +467,12 @@ export function setupPluginIPC(): void {
     return await pluginLoader.installPlugin(source || 'official', pluginId)
   })
 
+  ipcMain.handle('plugin:installFromFile', async (_, filePath: string) => {
+    const { pluginLoader } = require('./loader')
+    const plugin = await pluginLoader.installFromFile(filePath)
+    return { success: true, pluginId: plugin.manifest.id }
+  })
+
   ipcMain.handle('plugin:uninstall', async (_, pluginId: string) => {
     const { pluginLoader } = require('./loader')
     await pluginLoader.uninstallPlugin(pluginId)
@@ -522,7 +528,7 @@ export function setupPluginIPC(): void {
         name: 'Cloudflare 安全防护',
         version: '1.0.0',
         description: '集成 Cloudflare 安全功能，自动封禁恶意 IP，防 DDoS 攻击',
-        author: 'ServerHub',
+        author: 'Runixo',
         icon: '🛡️',
         downloads: 5200,
         rating: 4.7,
@@ -530,7 +536,7 @@ export function setupPluginIPC(): void {
         tags: ['安全', 'Cloudflare', '防火墙', 'DDoS'],
         category: 'security',
         official: true,
-        downloadUrl: 'https://plugins.serverhub.dev/cloudflare-security',
+        downloadUrl: 'https://plugins.runixo.dev/cloudflare-security',
         updatedAt: '2024-01-20',
         features: ['自动封禁恶意IP', 'WAF规则管理', 'DDoS防护', '安全仪表板'],
         changelog: [
@@ -546,7 +552,7 @@ export function setupPluginIPC(): void {
         name: 'Nginx 管理',
         version: '1.0.0',
         description: '可视化管理 Nginx 配置、虚拟主机和 SSL 证书',
-        author: 'ServerHub',
+        author: 'Runixo',
         icon: '🌐',
         downloads: 6200,
         rating: 4.6,
@@ -554,7 +560,7 @@ export function setupPluginIPC(): void {
         tags: ['Web服务器', 'Nginx', '反向代理'],
         category: 'web',
         official: true,
-        downloadUrl: 'https://plugins.serverhub.dev/nginx-manager',
+        downloadUrl: 'https://plugins.runixo.dev/nginx-manager',
         updatedAt: '2024-01-15',
         features: ['虚拟主机管理', 'SSL证书配置', '反向代理设置', '负载均衡'],
         changelog: [
@@ -567,7 +573,7 @@ export function setupPluginIPC(): void {
         name: 'MySQL 管理',
         version: '1.0.0',
         description: '数据库管理、备份恢复、性能监控',
-        author: 'ServerHub',
+        author: 'Runixo',
         icon: '🗄️',
         downloads: 5100,
         rating: 4.5,
@@ -575,7 +581,7 @@ export function setupPluginIPC(): void {
         tags: ['数据库', 'MySQL', 'SQL'],
         category: 'database',
         official: true,
-        downloadUrl: 'https://plugins.serverhub.dev/mysql-manager',
+        downloadUrl: 'https://plugins.runixo.dev/mysql-manager',
         updatedAt: '2024-01-10',
         features: ['数据库管理', '用户权限', '备份恢复', '性能监控'],
         changelog: [],
@@ -586,7 +592,7 @@ export function setupPluginIPC(): void {
         name: 'Redis 管理',
         version: '1.0.0',
         description: 'Redis 数据库可视化管理，支持键值浏览、监控',
-        author: 'ServerHub',
+        author: 'Runixo',
         icon: '🔴',
         downloads: 4300,
         rating: 4.4,
@@ -594,7 +600,7 @@ export function setupPluginIPC(): void {
         tags: ['数据库', 'Redis', '缓存'],
         category: 'database',
         official: true,
-        downloadUrl: 'https://plugins.serverhub.dev/redis-manager',
+        downloadUrl: 'https://plugins.runixo.dev/redis-manager',
         updatedAt: '2024-01-08',
         features: ['键值浏览', '数据编辑', '性能监控', '内存分析'],
         changelog: [],
@@ -605,7 +611,7 @@ export function setupPluginIPC(): void {
         name: '自动备份',
         version: '1.0.0',
         description: '定时备份文件和数据库到本地或云存储',
-        author: 'ServerHub',
+        author: 'Runixo',
         icon: '💾',
         downloads: 4200,
         rating: 4.3,
@@ -613,7 +619,7 @@ export function setupPluginIPC(): void {
         tags: ['备份', '定时任务', '云存储'],
         category: 'tools',
         official: true,
-        downloadUrl: 'https://plugins.serverhub.dev/backup-manager',
+        downloadUrl: 'https://plugins.runixo.dev/backup-manager',
         updatedAt: '2024-01-05',
         features: ['定时备份', '增量备份', '云存储支持', '备份恢复'],
         changelog: [],
@@ -624,7 +630,7 @@ export function setupPluginIPC(): void {
         name: '高级监控',
         version: '1.0.0',
         description: '详细的性能监控、告警通知、历史数据',
-        author: 'ServerHub',
+        author: 'Runixo',
         icon: '📊',
         downloads: 5600,
         rating: 4.6,
@@ -632,7 +638,7 @@ export function setupPluginIPC(): void {
         tags: ['监控', '告警', '性能'],
         category: 'monitor',
         official: true,
-        downloadUrl: 'https://plugins.serverhub.dev/advanced-monitor',
+        downloadUrl: 'https://plugins.runixo.dev/advanced-monitor',
         updatedAt: '2024-01-03',
         features: ['实时监控', '历史数据', '告警规则', '邮件通知'],
         changelog: [],
@@ -651,7 +657,7 @@ export function setupPluginIPC(): void {
         tags: ['游戏', 'Minecraft', '服务器'],
         category: 'game',
         official: false,
-        downloadUrl: 'https://plugins.serverhub.dev/minecraft-server',
+        downloadUrl: 'https://plugins.runixo.dev/minecraft-server',
         updatedAt: '2024-01-18',
         features: ['服务器控制', '玩家管理', '插件管理', '世界备份'],
         changelog: [],
@@ -662,7 +668,7 @@ export function setupPluginIPC(): void {
         name: '防火墙管理',
         version: '1.0.0',
         description: '可视化管理 iptables/firewalld 规则',
-        author: 'ServerHub',
+        author: 'Runixo',
         icon: '🔥',
         downloads: 3200,
         rating: 4.2,
@@ -670,7 +676,7 @@ export function setupPluginIPC(): void {
         tags: ['安全', '防火墙', '网络'],
         category: 'security',
         official: true,
-        downloadUrl: 'https://plugins.serverhub.dev/firewall-manager',
+        downloadUrl: 'https://plugins.runixo.dev/firewall-manager',
         updatedAt: '2024-01-02',
         features: ['规则管理', '端口控制', 'IP黑白名单', '日志分析'],
         changelog: [],

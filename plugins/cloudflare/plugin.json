@@ -3,7 +3,7 @@
   "name": "Cloudflare 管理",
   "version": "1.0.0",
   "description": "Cloudflare DNS、CDN、WAF、SSL证书、Tunnel 管理",
-  "author": "ServerHub",
+  "author": "Runixo",
   "icon": "☁️",
   "main": "dist/main.js",
   "renderer": "dist/ui.js",
@@ -212,6 +212,6 @@
   },
   "dependencies": [],
   "minAppVersion": "1.0.0",
-  "homepage": "https://github.com/serverhub/plugins/cloudflare",
-  "repository": "https://github.com/serverhub/plugins"
+  "homepage": "https://github.com/runixo/plugins/cloudflare",
+  "repository": "https://github.com/runixo/plugins"
 }

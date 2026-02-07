@@ -16,10 +16,19 @@
           <el-icon><FolderAdd /></el-icon>
           管理分组
         </el-button>
-        <el-button type="primary" @click="openAddDialog">
-          <el-icon><Plus /></el-icon>
-          添加服务器
-        </el-button>
+        <el-dropdown trigger="click" @command="handleAddServer">
+          <el-button type="primary">
+            <el-icon><Plus /></el-icon>
+            添加服务器
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="installed">已安装 Agent</el-dropdown-item>
+              <el-dropdown-item command="ssh">未安装 Agent（SSH 安装）</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
@@ -152,6 +161,59 @@
     </el-dialog>
 
     <!-- 批量命令对话框 -->
+
+    <!-- SSH 安装 Agent 对话框 -->
+    <el-dialog v-model="showSshInstall" title="SSH 安装 Agent" width="500px" :close-on-click-modal="false" destroy-on-close>
+      <el-form :model="sshForm" label-width="90px" v-if="sshStep === 'form'">
+        <el-form-item label="服务器名称" required>
+          <el-input v-model="sshForm.name" placeholder="给服务器起个名字" />
+        </el-form-item>
+        <el-form-item label="SSH 主机" required>
+          <el-input v-model="sshForm.host" placeholder="IP 地址或域名" />
+        </el-form-item>
+        <el-form-item label="SSH 端口">
+          <el-input-number v-model="sshForm.sshPort" :min="1" :max="65535" />
+        </el-form-item>
+        <el-form-item label="用户名" required>
+          <el-input v-model="sshForm.username" placeholder="root" />
+        </el-form-item>
+        <el-form-item label="认证方式">
+          <el-radio-group v-model="sshForm.authType">
+            <el-radio-button value="password">密码</el-radio-button>
+            <el-radio-button value="key">密钥</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="密码" v-if="sshForm.authType === 'password'" required>
+          <el-input v-model="sshForm.password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="私钥路径" v-if="sshForm.authType === 'key'" required>
+          <div style="display: flex; gap: 8px;">
+            <el-input v-model="sshForm.keyPath" placeholder="~/.ssh/id_rsa" style="flex: 1;" />
+            <el-button @click="selectKeyFile">选择文件</el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="分组">
+          <el-select v-model="sshForm.group">
+            <el-option v-for="g in groups" :key="g" :label="g" :value="g" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div v-else class="ssh-progress">
+        <div class="ssh-log" ref="sshLogRef">
+          <div v-for="(log, i) in sshLogs" :key="i" :class="['log-line', log.type]">{{ log.text }}</div>
+        </div>
+      </div>
+      <template #footer>
+        <template v-if="sshStep === 'form'">
+          <el-button @click="showSshInstall = false">取消</el-button>
+          <el-button type="primary" @click="startSshInstall" :loading="sshInstalling">开始安装</el-button>
+        </template>
+        <template v-else>
+          <el-button @click="showSshInstall = false" :disabled="sshInstalling">{{ sshInstalling ? '安装中...' : '关闭' }}</el-button>
+        </template>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="showBatchCommand" title="批量执行命令" width="800px" :close-on-click-modal="false">
       <div class="batch-command-content">
         <el-input
@@ -321,7 +383,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useServerStore, type Server } from '@/stores/server'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -334,6 +396,15 @@ const showAddDialog = ref(false)
 const showGroupDialog = ref(false)
 const showBatchCommand = ref(false)
 const showEditDialog = ref(false)
+const showSshInstall = ref(false)
+const sshStep = ref<'form' | 'progress'>('form')
+const sshInstalling = ref(false)
+const sshLogs = ref<{ text: string; type: string }[]>([])
+const sshLogRef = ref<HTMLElement>()
+const sshForm = ref({
+  name: '', host: '', sshPort: 22, username: 'root',
+  authType: 'password' as 'password' | 'key', password: '', keyPath: '', group: '默认'
+})
 const selectedServers = ref<string[]>([])
 const batchCommand = ref('')
 const batchExecuting = ref(false)
@@ -426,9 +497,74 @@ function deleteGroup(name: string) {
   }).catch(() => {})
 }
 
+function handleAddServer(command: string) {
+  if (command === 'installed') {
+    openAddDialog()
+  } else if (command === 'ssh') {
+    sshForm.value = { name: '', host: '', sshPort: 22, username: 'root', authType: 'password', password: '', keyPath: '', group: filterGroup.value || '默认' }
+    sshStep.value = 'form'
+    sshLogs.value = []
+    showSshInstall.value = true
+  }
+}
+
+async function startSshInstall() {
+  const f = sshForm.value
+  if (!f.name || !f.host || !f.username) { ElMessage.warning('请填写必要信息'); return }
+  if (f.authType === 'password' && !f.password) { ElMessage.warning('请输入密码'); return }
+
+  sshStep.value = 'progress'
+  sshInstalling.value = true
+  sshLogs.value = []
+
+  const cleanup = window.electronAPI.ssh.onInstallLog((log) => {
+    sshLogs.value.push(log)
+    nextTick(() => { if (sshLogRef.value) sshLogRef.value.scrollTop = sshLogRef.value.scrollHeight })
+  })
+
+  try {
+    const result = await window.electronAPI.ssh.installAgent({
+      host: f.host, sshPort: f.sshPort, username: f.username,
+      authType: f.authType, password: f.password, keyPath: f.keyPath
+    })
+
+    if (result.success) {
+      sshLogs.value.push({ text: '\n🎉 安装成功！正在添加服务器...', type: 'success' })
+      serverStore.addServer({
+        name: f.name, host: f.host, port: result.port,
+        token: result.token, group: f.group, useTls: false
+      })
+      ElMessage.success('Agent 安装成功，服务器已添加')
+      // 自动连接
+      const newSrv = serverStore.servers.find(s => s.host === f.host && s.token === result.token)
+      if (newSrv) {
+        try { await serverStore.connectServer(newSrv.id); sshLogs.value.push({ text: '✓ 已自动连接', type: 'success' }) }
+        catch { sshLogs.value.push({ text: '⚠ 自动连接失败，请手动连接', type: 'error' }) }
+      }
+    } else {
+      sshLogs.value.push({ text: `\n❌ 安装失败: ${result.error}`, type: 'error' })
+    }
+  } catch (e: any) {
+    sshLogs.value.push({ text: `❌ 错误: ${e.message}`, type: 'error' })
+  } finally {
+    cleanup()
+    sshInstalling.value = false
+  }
+}
+
+async function selectKeyFile() {
+  const path = await window.electronAPI.dialog.selectFile({
+    title: '选择 SSH 私钥',
+    filters: [
+      { name: 'SSH 密钥', extensions: ['*'] },
+      { name: '所有文件', extensions: ['*'] }
+    ]
+  })
+  if (path) sshForm.value.keyPath = path
+}
+
 function openAddDialog() {
   newServer.value = {
-    name: '',
     host: '',
     port: 9527,
     token: '',
@@ -986,6 +1122,26 @@ function getServerName(id: string): string {
         font-size: 12px;
         color: var(--text-secondary);
       }
+    }
+  }
+}
+
+.ssh-progress {
+  .ssh-log {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+
+    .log-line {
+      margin-bottom: 4px;
+      &.success { color: var(--success-color); }
+      &.error { color: var(--danger-color); }
+      &.info { color: var(--text-color); }
     }
   }
 }

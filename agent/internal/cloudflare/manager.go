@@ -69,7 +69,7 @@ func DefaultSecurityConfig() *SecurityConfig {
 		Watcher:    DefaultWatcherConfig(),
 		Detector:   DefaultDetectorConfig(),
 		Blocker:    DefaultBlockerConfig(),
-		DataPath:   "/var/lib/serverhub/cloudflare",
+		DataPath:   "/var/lib/runixo/cloudflare",
 	}
 }
 

@@ -90,8 +90,8 @@ type PluginInfo struct {
 	Description string      `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	Author      string      `protobuf:"bytes,5,opt,name=author,proto3" json:"author,omitempty"`
 	Icon        string      `protobuf:"bytes,6,opt,name=icon,proto3" json:"icon,omitempty"`
-	State       PluginState `protobuf:"varint,7,opt,name=state,proto3,enum=serverhub.PluginState" json:"state,omitempty"`
-	Type        PluginType  `protobuf:"varint,8,opt,name=type,proto3,enum=serverhub.PluginType" json:"type,omitempty"`
+	State       PluginState `protobuf:"varint,7,opt,name=state,proto3,enum=runixo.PluginState" json:"state,omitempty"`
+	Type        PluginType  `protobuf:"varint,8,opt,name=type,proto3,enum=runixo.PluginType" json:"type,omitempty"`
 	Permissions []string    `protobuf:"bytes,9,rep,name=permissions,proto3" json:"permissions,omitempty"`
 	InstalledAt int64       `protobuf:"varint,10,opt,name=installed_at,json=installedAt,proto3" json:"installed_at,omitempty"`
 	UpdatedAt   int64       `protobuf:"varint,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
@@ -138,7 +138,7 @@ func (x *SetPluginConfigRequest) GetConfigJson() string {
 // PluginStatus message
 type PluginStatusMsg struct {
 	PluginId string            `protobuf:"bytes,1,opt,name=plugin_id,json=pluginId,proto3" json:"plugin_id,omitempty"`
-	State    PluginState       `protobuf:"varint,2,opt,name=state,proto3,enum=serverhub.PluginState" json:"state,omitempty"`
+	State    PluginState       `protobuf:"varint,2,opt,name=state,proto3,enum=runixo.PluginState" json:"state,omitempty"`
 	Running  bool              `protobuf:"varint,3,opt,name=running,proto3" json:"running,omitempty"`
 	Error    string            `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
 	Uptime   int64             `protobuf:"varint,5,opt,name=uptime,proto3" json:"uptime,omitempty"`
@@ -158,7 +158,7 @@ type AvailablePlugin struct {
 	Description string     `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	Author      string     `protobuf:"bytes,5,opt,name=author,proto3" json:"author,omitempty"`
 	Icon        string     `protobuf:"bytes,6,opt,name=icon,proto3" json:"icon,omitempty"`
-	Type        PluginType `protobuf:"varint,7,opt,name=type,proto3,enum=serverhub.PluginType" json:"type,omitempty"`
+	Type        PluginType `protobuf:"varint,7,opt,name=type,proto3,enum=runixo.PluginType" json:"type,omitempty"`
 	Downloads   int64      `protobuf:"varint,8,opt,name=downloads,proto3" json:"downloads,omitempty"`
 	Rating      float64    `protobuf:"fixed64,9,opt,name=rating,proto3" json:"rating,omitempty"`
 	RatingCount int32      `protobuf:"varint,10,opt,name=rating_count,json=ratingCount,proto3" json:"rating_count,omitempty"`

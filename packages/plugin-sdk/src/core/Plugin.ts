@@ -9,7 +9,7 @@ import {
   AgentToolDefinition,
   AgentCallOptions,
   AgentResponse
-} from '@serverhub/plugin-types'
+} from 'runixo-plugin-types'
 
 /**
  * 插件基类
@@ -157,9 +157,9 @@ export abstract class Plugin {
    * 日志记录
    */
   protected log = {
-    debug: (...args: any[]) => this.context.logger.debug(...args),
-    info: (...args: any[]) => this.context.logger.info(...args),
-    warn: (...args: any[]) => this.context.logger.warn(...args),
-    error: (...args: any[]) => this.context.logger.error(...args)
+    debug: (msg: string, ...args: any[]) => this.context.logger.debug(msg, ...args),
+    info: (msg: string, ...args: any[]) => this.context.logger.info(msg, ...args),
+    warn: (msg: string, ...args: any[]) => this.context.logger.warn(msg, ...args),
+    error: (msg: string, ...args: any[]) => this.context.logger.error(msg, ...args)
   }
 }

@@ -7,7 +7,7 @@ Agent 服务因为上传失败导致二进制文件被清空，需要手动恢�
 SSH 登录服务器后执行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Zhang142857/serverhub/main/scripts/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Zhang142857/runixo/main/scripts/install.sh | sudo bash
 ```
 
 这会重新下载并安装最新的 agent。
@@ -16,14 +16,14 @@ curl -fsSL https://raw.githubusercontent.com/Zhang142857/serverhub/main/scripts/
 
 ```bash
 # 下载最新 release
-wget https://github.com/Zhang142857/serverhub/releases/latest/download/serverhub-agent-linux-amd64 -O /usr/local/bin/serverhub-agent
-chmod +x /usr/local/bin/serverhub-agent
+wget https://github.com/Zhang142857/runixo/releases/latest/download/runixo-agent-linux-amd64 -O /usr/local/bin/runixo-agent
+chmod +x /usr/local/bin/runixo-agent
 
 # 重启服务
-systemctl restart serverhub-agent
+systemctl restart runixo-agent
 
 # 检查状态
-systemctl status serverhub-agent
+systemctl status runixo-agent
 ```
 
 ## 恢复后
@@ -36,10 +36,10 @@ systemctl status serverhub-agent
 
 ```bash
 # 从本地上传（在 Windows PowerShell 中）
-scp agent/serverhub-agent-linux user@3.143.142.246:/tmp/serverhub-agent-new
+scp agent/runixo-agent-linux user@3.143.142.246:/tmp/runixo-agent-new
 
 # 在服务器上替换
-sudo mv /tmp/serverhub-agent-new /usr/local/bin/serverhub-agent
-sudo chmod +x /usr/local/bin/serverhub-agent
-sudo systemctl restart serverhub-agent
+sudo mv /tmp/runixo-agent-new /usr/local/bin/runixo-agent
+sudo chmod +x /usr/local/bin/runixo-agent
+sudo systemctl restart runixo-agent
 ```

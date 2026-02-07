@@ -8,8 +8,8 @@ import { devCommand } from './commands/dev'
 const program = new Command()
 
 program
-  .name('serverhub-plugin')
-  .description('CLI tool for creating and managing ServerHub plugins')
+  .name('runixo-plugin')
+  .description('CLI tool for creating and managing Runixo plugins')
   .version('1.0.0')
 
 // 创建插件命令

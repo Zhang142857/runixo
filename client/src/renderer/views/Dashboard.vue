@@ -160,26 +160,77 @@
 
     <!-- 添加服务器对话框 -->
     <el-dialog v-model="showAddServer" title="添加服务器" width="450px" class="dark-dialog">
-      <el-form :model="newServer" label-width="70px" size="small">
-        <el-form-item label="名称" required>
-          <el-input v-model="newServer.name" placeholder="服务器名称" />
-        </el-form-item>
-        <el-form-item label="主机" required>
-          <el-input v-model="newServer.host" placeholder="IP 或域名" />
-        </el-form-item>
-        <el-form-item label="端口" required>
-          <el-input-number v-model="newServer.port" :min="1" :max="65535" />
-        </el-form-item>
-        <el-form-item label="Token" required>
-          <el-input v-model="newServer.token" type="password" show-password placeholder="认证令牌" />
-        </el-form-item>
-        <el-form-item label="TLS">
-          <el-switch v-model="newServer.useTls" />
-        </el-form-item>
-      </el-form>
+      <el-tabs v-model="addMode" class="add-tabs">
+        <el-tab-pane label="手动添加" name="manual">
+          <el-form :model="newServer" label-width="70px" size="small">
+            <el-form-item label="名称" required>
+              <el-input v-model="newServer.name" placeholder="服务器名称" />
+            </el-form-item>
+            <el-form-item label="主机" required>
+              <el-input v-model="newServer.host" placeholder="IP 或域名" />
+            </el-form-item>
+            <el-form-item label="端口" required>
+              <el-input-number v-model="newServer.port" :min="1" :max="65535" />
+            </el-form-item>
+            <el-form-item label="Token" required>
+              <el-input v-model="newServer.token" type="password" show-password placeholder="认证令牌" />
+            </el-form-item>
+            <el-form-item label="TLS">
+              <el-switch v-model="newServer.useTls" />
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+        <el-tab-pane label="SSH 安装" name="ssh">
+          <el-form :model="sshForm" label-width="80px" size="small" v-if="sshStep === 'form'">
+            <el-form-item label="服务器名称" required>
+              <el-input v-model="sshForm.name" placeholder="给服务器起个名字" />
+            </el-form-item>
+            <el-form-item label="SSH 主机" required>
+              <el-input v-model="sshForm.host" placeholder="IP 地址或域名" />
+            </el-form-item>
+            <el-form-item label="SSH 端口">
+              <el-input-number v-model="sshForm.sshPort" :min="1" :max="65535" />
+            </el-form-item>
+            <el-form-item label="用户名" required>
+              <el-input v-model="sshForm.username" placeholder="root" />
+            </el-form-item>
+            <el-form-item label="认证方式">
+              <el-radio-group v-model="sshForm.authType">
+                <el-radio-button value="password">密码</el-radio-button>
+                <el-radio-button value="key">密钥</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="密码" v-if="sshForm.authType === 'password'" required>
+              <el-input v-model="sshForm.password" type="password" show-password />
+            </el-form-item>
+            <el-form-item label="私钥路径" v-if="sshForm.authType === 'key'" required>
+              <div style="display: flex; gap: 8px;">
+                <el-input v-model="sshForm.keyPath" placeholder="~/.ssh/id_rsa" style="flex: 1;" />
+                <el-button @click="selectKeyFile">选择文件</el-button>
+              </div>
+            </el-form-item>
+          </el-form>
+          <div v-else class="ssh-progress">
+            <div class="ssh-log" ref="sshLogRef">
+              <div v-for="(log, i) in sshLogs" :key="i" :class="['log-line', log.type]">{{ log.text }}</div>
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
       <template #footer>
-        <el-button size="small" @click="showAddServer = false">取消</el-button>
-        <el-button type="primary" size="small" @click="addServer" :loading="adding">添加</el-button>
+        <template v-if="addMode === 'manual'">
+          <el-button size="small" @click="showAddServer = false">取消</el-button>
+          <el-button type="primary" size="small" @click="addServer" :loading="adding">添加</el-button>
+        </template>
+        <template v-else>
+          <template v-if="sshStep === 'form'">
+            <el-button size="small" @click="showAddServer = false">取消</el-button>
+            <el-button type="primary" size="small" @click="startSshInstall" :loading="sshInstalling">开始安装</el-button>
+          </template>
+          <template v-else>
+            <el-button size="small" @click="showAddServer = false" :disabled="sshInstalling">{{ sshInstalling ? '安装中...' : '关闭' }}</el-button>
+          </template>
+        </template>
       </template>
     </el-dialog>
   </div>
@@ -238,13 +289,34 @@ const serverStore = useServerStore()
 
 const showAddServer = ref(false)
 const adding = ref(false)
+const addMode = ref('manual')
 const newServer = ref({ name: '', host: '', port: 9527, token: '', useTls: false })
+
+const sshStep = ref<'form' | 'progress'>('form')
+const sshInstalling = ref(false)
+const sshLogs = ref<{ text: string; type: string }[]>([])
+const sshLogRef = ref<HTMLElement>()
+const sshForm = ref({
+  name: '', host: '', sshPort: 22, username: 'root',
+  authType: 'password' as 'password' | 'key', password: '', keyPath: ''
+})
 
 const metrics = ref<Record<string, { cpu: number; memory: number; disk: number }>>({})
 const containerStats = ref({ total: 0, running: 0 })
 const serviceStats = ref({ total: 0, running: 0 })
 const cleanupFns = ref<Record<string, () => void>>({})
 const animatedHealthScore = ref(0)
+
+// 重置对话框状态
+watch(showAddServer, (val) => {
+  if (!val) {
+    addMode.value = 'manual'
+    sshStep.value = 'form'
+    sshInstalling.value = false
+    sshLogs.value = []
+    sshForm.value = { name: '', host: '', sshPort: 22, username: 'root', authType: 'password', password: '', keyPath: '' }
+  }
+})
 
 // 快速链接配置
 const quickLinks = [
@@ -398,6 +470,62 @@ function goToServer(server: any) {
     serverStore.setCurrentServer(server.id)
     router.push(`/server/${server.id}`)
   }
+}
+
+async function startSshInstall() {
+  const f = sshForm.value
+  if (!f.name || !f.host || !f.username) { ElMessage.warning('请填写必要信息'); return }
+  if (f.authType === 'password' && !f.password) { ElMessage.warning('请输入密码'); return }
+
+  sshStep.value = 'progress'
+  sshInstalling.value = true
+  sshLogs.value = []
+
+  const cleanup = window.electronAPI.ssh.onInstallLog((log) => {
+    sshLogs.value.push(log)
+    setTimeout(() => { if (sshLogRef.value) sshLogRef.value.scrollTop = sshLogRef.value.scrollHeight }, 0)
+  })
+
+  try {
+    const result = await window.electronAPI.ssh.installAgent({
+      host: f.host, sshPort: f.sshPort, username: f.username,
+      authType: f.authType, password: f.password, keyPath: f.keyPath
+    })
+
+    if (result.success) {
+      sshLogs.value.push({ text: '\n🎉 安装成功！正在添加服务器...', type: 'success' })
+      const id = serverStore.addServer({
+        name: f.name, host: f.host, port: result.port,
+        token: result.token, useTls: false
+      })
+      ElMessage.success('Agent 安装成功，服务器已添加')
+      try { 
+        await serverStore.connectServer(id)
+        sshLogs.value.push({ text: '✓ 已自动连接', type: 'success' })
+        startMetrics(id)
+      } catch { 
+        sshLogs.value.push({ text: '⚠ 自动连接失败，请手动连接', type: 'error' }) 
+      }
+    } else {
+      sshLogs.value.push({ text: `\n❌ 安装失败: ${result.error}`, type: 'error' })
+    }
+  } catch (e: any) {
+    sshLogs.value.push({ text: `❌ 错误: ${e.message}`, type: 'error' })
+  } finally {
+    cleanup()
+    sshInstalling.value = false
+  }
+}
+
+async function selectKeyFile() {
+  const path = await window.electronAPI.dialog.selectFile({
+    title: '选择 SSH 私钥',
+    filters: [
+      { name: 'SSH 密钥', extensions: ['*'] },
+      { name: '所有文件', extensions: ['*'] }
+    ]
+  })
+  if (path) sshForm.value.keyPath = path
 }
 
 async function handleServerAction(action: string, server: any) {
@@ -914,6 +1042,40 @@ async function addServer() {
   .el-dialog__footer {
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-color);
+  }
+}
+
+.add-tabs {
+  :deep(.el-tabs__nav-wrap::after) {
+    display: none;
+  }
+}
+
+.ssh-progress {
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ssh-log {
+  flex: 1;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  overflow-y: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+
+  .log-line {
+    margin-bottom: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+
+    &.info { color: var(--text-primary); }
+    &.success { color: var(--success-color); }
+    &.error { color: var(--danger-color); }
   }
 }
 </style>

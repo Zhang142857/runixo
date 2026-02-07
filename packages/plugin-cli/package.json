@@ -1,9 +1,9 @@
 {
-  "name": "@serverhub/plugin-cli",
+  "name": "runixo-plugin-cli",
   "version": "1.0.0",
-  "description": "CLI tool for creating and managing ServerHub plugins",
+  "description": "CLI tool for creating and managing Runixo plugins",
   "bin": {
-    "serverhub-plugin": "./dist/index.js"
+    "runixo-plugin": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -11,14 +11,14 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "serverhub",
+    "runixo",
     "plugin",
     "cli"
   ],
-  "author": "ServerHub",
+  "author": "Runixo",
   "license": "MIT",
   "dependencies": {
-    "@serverhub/plugin-types": "^1.0.0",
+    "runixo-plugin-types": "^1.0.0",
     "commander": "^11.1.0",
     "inquirer": "^9.2.12",
     "chalk": "^5.3.0",

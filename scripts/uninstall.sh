@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# ServerHub Agent 卸载脚本
+# Runixo Agent 卸载脚本
 #
 
 set -e
@@ -16,7 +16,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo ""
-echo -e "${YELLOW}警告: 这将完全卸载 ServerHub Agent${NC}"
+echo -e "${YELLOW}警告: 这将完全卸载 Runixo Agent${NC}"
 read -p "确定要卸载吗? [y/N] " -n 1 -r
 echo ""
 
@@ -26,17 +26,17 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo "停止服务..."
-systemctl stop serverhub-agent 2>/dev/null || true
-systemctl disable serverhub-agent 2>/dev/null || true
+systemctl stop runixo-agent 2>/dev/null || true
+systemctl disable runixo-agent 2>/dev/null || true
 
 echo "删除文件..."
-rm -f /usr/local/bin/serverhub-agent
-rm -f /usr/local/bin/serverhub
-rm -f /etc/systemd/system/serverhub-agent.service
-rm -rf /etc/serverhub
+rm -f /usr/local/bin/runixo-agent
+rm -f /usr/local/bin/runixo
+rm -f /etc/systemd/system/runixo-agent.service
+rm -rf /etc/runixo
 
 systemctl daemon-reload
 
 echo ""
-echo -e "${GREEN}ServerHub Agent 已完全卸载${NC}"
+echo -e "${GREEN}Runixo Agent 已完全卸载${NC}"
 echo ""

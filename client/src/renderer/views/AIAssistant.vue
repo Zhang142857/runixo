@@ -60,7 +60,7 @@
               <defs><linearGradient id="grad1" x1="8" y1="12" x2="56" y2="52"><stop stop-color="#6366f1" /><stop offset="1" stop-color="#8b5cf6" /></linearGradient></defs>
             </svg>
           </div>
-          <h2>你好，我是 ServerHub AI 助手</h2>
+          <h2>你好，我是 Runixo AI 助手</h2>
           <p v-if="agentModeEnabled">Agent 模式已启用，我可以直接操作服务器执行任务</p>
           <p v-else>我可以帮助你解答服务器管理相关问题</p>
           <div class="quick-actions">
@@ -282,7 +282,7 @@ async function processChatMessage(userMessage: string) {
   aiStore.startProcessing('思考中...')
   try {
     const response = await window.electronAPI.ai.chat(userMessage, {
-      systemPrompt: '你是 ServerHub AI 助手，帮助用户解答服务器管理相关问题。'
+      systemPrompt: '你是 Runixo AI 助手，帮助用户解答服务器管理相关问题。'
     })
     aiStore.addAssistantMessage(response)
   } catch (e) {

@@ -1,9 +1,9 @@
 ﻿package server
 
 import (
-pb "github.com/serverhub/agent/api/proto"
-"github.com/serverhub/agent/internal/collector"
-"github.com/serverhub/agent/internal/executor"
+pb "github.com/runixo/agent/api/proto"
+"github.com/runixo/agent/internal/collector"
+"github.com/runixo/agent/internal/executor"
 )
 
 func convertSystemInfo(info *collector.SystemInfo) *pb.SystemInfo {

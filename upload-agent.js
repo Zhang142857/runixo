@@ -16,7 +16,7 @@ async function main() {
   })
 
   const proto = grpc.loadPackageDefinition(packageDefinition)
-  const client = new proto.serverhub.AgentService(
+  const client = new proto.runixo.AgentService(
     '3.143.142.246:9527',
     grpc.credentials.createInsecure()
   )
@@ -24,7 +24,7 @@ async function main() {
   const metadata = new grpc.Metadata()
   metadata.set('authorization', `Bearer ${TOKEN}`)
 
-  const binaryPath = join(__dirname, 'agent', 'serverhub-agent-linux')
+  const binaryPath = join(__dirname, 'agent', 'runixo-agent-linux')
   const binaryContent = fs.readFileSync(binaryPath)
   const base64 = binaryContent.toString('base64')
   
@@ -58,22 +58,22 @@ async function main() {
   
   // 解码
   console.log('Decoding...')
-  await execCmd(client, metadata, 'base64 -d /tmp/agent.b64 > /tmp/serverhub-agent-new', 120)
+  await execCmd(client, metadata, 'base64 -d /tmp/agent.b64 > /tmp/runixo-agent-new', 120)
   
   // 验证解码后的文件
-  const decoded = await execCmd(client, metadata, 'ls -la /tmp/serverhub-agent-new && md5sum /tmp/serverhub-agent-new')
+  const decoded = await execCmd(client, metadata, 'ls -la /tmp/runixo-agent-new && md5sum /tmp/runixo-agent-new')
   console.log('Decoded file:', decoded.stdout)
   
   // 替换并重启
   console.log('Replacing and restarting...')
-  await execCmd(client, metadata, 'chmod +x /tmp/serverhub-agent-new && mv /tmp/serverhub-agent-new /usr/local/bin/serverhub-agent')
-  await execCmd(client, metadata, 'systemctl restart serverhub-agent')
+  await execCmd(client, metadata, 'chmod +x /tmp/runixo-agent-new && mv /tmp/runixo-agent-new /usr/local/bin/runixo-agent')
+  await execCmd(client, metadata, 'systemctl restart runixo-agent')
   
   // 等待启动
   await new Promise(r => setTimeout(r, 3000))
   
   // 检查日志
-  const logs = await execCmd(client, metadata, 'journalctl -u serverhub-agent -n 10 --no-pager')
+  const logs = await execCmd(client, metadata, 'journalctl -u runixo-agent -n 10 --no-pager')
   console.log('\nLogs:', logs.stdout)
   
   // 测试 API

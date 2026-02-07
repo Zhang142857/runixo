@@ -962,7 +962,7 @@ export class SnapshotService {
       status: 'creating',
       storage: {
         type: 'local',
-        path: `/var/serverhub/snapshots/${snapshot.id}`
+        path: `/var/runixo/snapshots/${snapshot.id}`
       },
       metadata: {
         hostname: os.hostname(),

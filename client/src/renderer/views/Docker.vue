@@ -1796,7 +1796,7 @@ async function loadHubTrending() {
 }
 
 .log-container {
-  background: #1a1a1a;
+  background: var(--bg-tertiary);
   border-radius: 6px;
   padding: 12px;
   max-height: 500px;
@@ -1805,7 +1805,7 @@ async function loadHubTrending() {
   pre {
     margin: 0;
     font-size: 12px;
-    color: #d4d4d4;
+    color: var(--text-color);
     white-space: pre-wrap;
     word-break: break-all;
     font-family: 'Consolas', monospace;

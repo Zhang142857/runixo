@@ -75,7 +75,7 @@ Cloud.vue (入口页面)
 ### 接口定义
 
 ```typescript
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 /**
  * 云资源类型
@@ -254,7 +254,7 @@ export abstract class CloudServicePlugin extends Plugin {
 ### 插件主文件
 
 ```typescript
-import { CloudServicePlugin, CloudResource, CloudResourceType } from '@serverhub/cloud-plugin-base'
+import { CloudServicePlugin, CloudResource, CloudResourceType } from '@runixo/cloud-plugin-base'
 
 export default class CloudflarePlugin extends CloudServicePlugin {
   private apiToken: string | null = null
@@ -685,7 +685,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { usePluginStore } from '@/stores/plugin'
-import type { CloudResource, CloudResourceType } from '@serverhub/cloud-plugin-base'
+import type { CloudResource, CloudResourceType } from '@runixo/cloud-plugin-base'
 
 const router = useRouter()
 const pluginStore = usePluginStore()

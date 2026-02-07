@@ -1,8 +1,8 @@
-# ServerHub 插件SDK开发完成总结
+# Runixo 插件SDK开发完成总结
 
 ## ✅ 已完成的工作
 
-### 1. 插件类型定义包 (@serverhub/plugin-types)
+### 1. 插件类型定义包 (runixo-plugin-types)
 
 **位置**: `packages/plugin-types/`
 
@@ -16,7 +16,7 @@
 - ✅ AgentToolDefinition - Agent工具定义
 - ✅ 所有API接口类型（HTTP、存储、UI、系统、事件、Agent）
 
-### 2. 插件SDK核心包 (@serverhub/plugin-sdk)
+### 2. 插件SDK核心包 (runixo-plugin-sdk)
 
 **位置**: `packages/plugin-sdk/`
 
@@ -27,7 +27,7 @@
 - ✅ Agent调用方法（callAgent）
 - ✅ 日志记录方法
 
-### 3. 插件CLI工具 (@serverhub/plugin-cli)
+### 3. 插件CLI工具 (runixo-plugin-cli)
 
 **位置**: `packages/plugin-cli/`
 
@@ -99,7 +99,7 @@
 ## 📦 包结构总览
 
 ```
-serverhub/
+runixo/
 ├── packages/
 │   ├── plugin-types/          # TypeScript类型定义
 │   │   ├── src/
@@ -195,17 +195,17 @@ serverhub/
 
 ```bash
 # 安装CLI工具
-npm install -g @serverhub/plugin-cli
+npm install -g runixo-plugin-cli
 
 # 创建插件
-serverhub-plugin create my-plugin
+runixo-plugin create my-plugin
 
 # 选择模板
 ? Select a template: Basic Plugin
 
 # 填写信息
 ? Display name: My Plugin
-? Description: A ServerHub plugin
+? Description: A Runixo plugin
 ? Author: Your Name
 ? Version: 1.0.0
 
@@ -225,7 +225,7 @@ npm run build
 ### 插件代码示例
 
 ```typescript
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class MyPlugin extends Plugin {
   constructor(context: PluginContext) {
@@ -370,16 +370,16 @@ NPM包配置，定义依赖和脚本。
 
 ```json
 {
-  "name": "@serverhub/plugin-my-plugin",
+  "name": "@runixo/plugin-my-plugin",
   "version": "1.0.0",
   "main": "dist/main/index.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "dev": "serverhub-plugin dev"
+    "dev": "runixo-plugin dev"
   },
   "dependencies": {
-    "@serverhub/plugin-sdk": "^1.0.0"
+    "runixo-plugin-sdk": "^1.0.0"
   }
 }
 ```
@@ -388,7 +388,7 @@ NPM包配置，定义依赖和脚本。
 
 ## 🎉 总结
 
-我们已经成功完成了ServerHub插件SDK的开发，包括：
+我们已经成功完成了Runixo插件SDK的开发，包括：
 
 ✅ 完整的TypeScript类型系统  
 ✅ 功能强大的Plugin基类  
@@ -398,7 +398,7 @@ NPM包配置，定义依赖和脚本。
 ✅ 完整的文档  
 ✅ Cloudflare插件v2示例  
 
-插件SDK现在已经可以使用，开发者可以快速创建功能丰富的ServerHub插件！
+插件SDK现在已经可以使用，开发者可以快速创建功能丰富的Runixo插件！
 
 ---
 

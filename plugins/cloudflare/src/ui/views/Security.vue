@@ -366,7 +366,7 @@ async function confirmBlock() {
       body: JSON.stringify({
         mode: 'block',
         configuration: { target: 'ip', value: blockForm.value.ip },
-        notes: blockForm.value.reason || 'Blocked by ServerHub'
+        notes: blockForm.value.reason || 'Blocked by Runixo'
       })
     })
     if (response.success && response.data?.success) {

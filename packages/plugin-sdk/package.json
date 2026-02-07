@@ -1,7 +1,7 @@
 {
-  "name": "@serverhub/plugin-sdk",
+  "name": "runixo-plugin-sdk",
   "version": "1.0.0",
-  "description": "SDK for building ServerHub plugins",
+  "description": "SDK for building Runixo plugins",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -10,14 +10,14 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "serverhub",
+    "runixo",
     "plugin",
     "sdk"
   ],
-  "author": "ServerHub",
+  "author": "Runixo",
   "license": "MIT",
   "dependencies": {
-    "@serverhub/plugin-types": "^1.0.0"
+    "runixo-plugin-types": "^1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.3.0"

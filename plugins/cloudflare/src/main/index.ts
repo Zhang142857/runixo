@@ -268,7 +268,7 @@ export async function createIPAccessRule(args: {
       target: 'ip',
       value: args.ip
     },
-    notes: args.notes || `Added by ServerHub at ${new Date().toISOString()}`
+    notes: args.notes || `Added by Runixo at ${new Date().toISOString()}`
   })
 }
 

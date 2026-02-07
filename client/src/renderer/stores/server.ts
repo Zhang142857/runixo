@@ -163,13 +163,13 @@ export const useServerStore = defineStore('server', () => {
   }
 
   function saveToStorage() {
-    localStorage.setItem('serverhub_servers', JSON.stringify(servers.value))
-    localStorage.setItem('serverhub_groups', JSON.stringify(groups.value))
+    localStorage.setItem('runixo_servers', JSON.stringify(servers.value))
+    localStorage.setItem('runixo_groups', JSON.stringify(groups.value))
   }
 
   function loadFromStorage() {
-    const savedServers = localStorage.getItem('serverhub_servers')
-    const savedGroups = localStorage.getItem('serverhub_groups')
+    const savedServers = localStorage.getItem('runixo_servers')
+    const savedGroups = localStorage.getItem('runixo_groups')
 
     if (savedServers) {
       servers.value = JSON.parse(savedServers).map((s: Server) => ({

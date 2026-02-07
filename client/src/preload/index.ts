@@ -48,10 +48,33 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('server:startMetrics', serverId, interval),
     executeCommand: (serverId: string, command: string, args?: string[], options?: { timeout?: number; sudo?: boolean }): Promise<CommandResult> =>
       ipcRenderer.invoke('server:executeCommand', serverId, command, args, options),
+    executeCommandStream: (serverId: string, cmd: string, streamId: string, onOutput: (data: string) => void): Promise<{ exit_code: number }> => {
+      const channel = `cmd:output:${streamId}`
+      const handler = (_: any, data: string) => onOutput(data)
+      ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('server:executeCommandStream', serverId, cmd, streamId).finally(() => {
+        ipcRenderer.removeListener(channel, handler)
+      })
+    },
     onMetrics: (serverId: string, callback: (metrics: Metrics) => void): (() => void) => {
       const channel = `metrics:${serverId}`
       ipcRenderer.on(channel, (_, data) => callback(data))
       return () => ipcRenderer.removeAllListeners(channel)
+    },
+    checkUpdate: (serverId: string): Promise<any> =>
+      ipcRenderer.invoke('server:checkUpdate', serverId),
+    applyUpdate: (serverId: string, version: string): Promise<any> =>
+      ipcRenderer.invoke('server:applyUpdate', serverId, version),
+  },
+
+  // SSH 安装
+  ssh: {
+    installAgent: (params: any): Promise<{ success: boolean; port: number; token: string; error?: string }> =>
+      ipcRenderer.invoke('ssh:installAgent', params),
+    onInstallLog: (callback: (log: { text: string; type: string }) => void): (() => void) => {
+      const handler = (_: any, log: any) => callback(log)
+      ipcRenderer.on('ssh:install:log', handler)
+      return () => ipcRenderer.removeListener('ssh:install:log', handler)
     }
   },
 
@@ -215,7 +238,11 @@ const electronAPI: ElectronAPI = {
     saveFile: (options: SaveDialogOptions): Promise<SaveDialogResult> =>
       ipcRenderer.invoke('dialog:saveFile', options),
     showOpenDialog: (options: { properties?: string[]; title?: string; filters?: { name: string; extensions: string[] }[] }): Promise<{ canceled: boolean; filePaths: string[] }> =>
-      ipcRenderer.invoke('dialog:showOpenDialog', options)
+      ipcRenderer.invoke('dialog:showOpenDialog', options),
+    selectFile: async (options: { title?: string; filters?: { name: string; extensions: string[] }[] }): Promise<string | null> => {
+      const result = await ipcRenderer.invoke('dialog:openFile', { ...options, properties: ['openFile'] })
+      return result.canceled ? null : result.filePaths[0]
+    }
   },
 
   // 本地文件系统
@@ -384,6 +411,9 @@ const electronAPI: ElectronAPI = {
 
     install: (pluginId: string, source?: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('plugin:install', pluginId, source),
+
+    installFromFile: (filePath: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('plugin:installFromFile', filePath),
 
     uninstall: (pluginId: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('plugin:uninstall', pluginId),

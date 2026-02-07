@@ -499,13 +499,43 @@ html, body {
 
 // 标签样式
 .el-tag {
+  --el-tag-bg-color: var(--bg-tertiary);
+  --el-tag-border-color: var(--border-color);
+  --el-tag-text-color: var(--text-secondary);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
+
+  &.el-tag--info {
+    --el-tag-bg-color: var(--bg-tertiary);
+    --el-tag-border-color: var(--border-color);
+    --el-tag-text-color: var(--text-secondary);
+  }
+  &.el-tag--success {
+    --el-tag-bg-color: var(--success-light);
+    --el-tag-border-color: rgba(16, 185, 129, 0.3);
+    --el-tag-text-color: var(--success-color);
+  }
+  &.el-tag--warning {
+    --el-tag-bg-color: var(--warning-light);
+    --el-tag-border-color: rgba(245, 158, 11, 0.3);
+    --el-tag-text-color: var(--warning-color);
+  }
+  &.el-tag--danger {
+    --el-tag-bg-color: var(--danger-light);
+    --el-tag-border-color: rgba(248, 113, 113, 0.3);
+    --el-tag-text-color: var(--danger-color);
+  }
 }
 
 // 按钮尺寸优化
 .el-button {
   --el-button-size: 32px;
+  --el-button-bg-color: var(--bg-tertiary);
+  --el-button-border-color: var(--border-color);
+  --el-button-text-color: var(--text-color);
+  --el-button-hover-bg-color: var(--bg-elevated);
+  --el-button-hover-border-color: var(--border-color-light);
+  --el-button-hover-text-color: var(--text-color);
   font-size: var(--text-sm);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
@@ -514,6 +544,13 @@ html, body {
   &:focus-visible {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
+  }
+
+  &.is-text, &.is-link {
+    --el-button-bg-color: transparent;
+    --el-button-border-color: transparent;
+    --el-button-hover-bg-color: var(--bg-tertiary);
+    --el-button-hover-border-color: transparent;
   }
 }
 

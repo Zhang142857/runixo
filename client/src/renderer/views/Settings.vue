@@ -2,7 +2,7 @@
   <div class="settings-page">
     <div class="page-header">
       <h1>设置</h1>
-      <p class="subtitle">配置 ServerHub 的各项功能</p>
+      <p class="subtitle">配置 Runixo 的各项功能</p>
     </div>
 
     <el-tabs tab-position="left" v-model="activeTab">
@@ -62,7 +62,7 @@
           <el-form label-width="140px">
             <el-form-item label="开机自启动">
               <el-switch v-model="settings.autoStart" />
-              <span class="form-hint">系统启动时自动运行 ServerHub</span>
+              <span class="form-hint">系统启动时自动运行 Runixo</span>
             </el-form-item>
             <el-form-item label="最小化到托盘">
               <el-switch v-model="settings.minimizeToTray" />
@@ -682,18 +682,18 @@
         <el-card>
           <div class="about-content">
             <div class="app-logo">🖥️</div>
-            <h2>ServerHub</h2>
+            <h2>Runixo</h2>
             <p class="version">版本 0.1.0</p>
             <p class="description">AI-Native 服务器管理平台</p>
             <p class="tagline">安全、智能、高效的多服务器管理解决方案</p>
             <div class="links">
-              <el-button text type="primary" @click="openLink('https://github.com/serverhub/serverhub')">
+              <el-button text type="primary" @click="openLink('https://github.com/runixo/runixo')">
                 <el-icon><Link /></el-icon> GitHub
               </el-button>
-              <el-button text type="primary" @click="openLink('https://serverhub.io/docs')">
+              <el-button text type="primary" @click="openLink('https://runixo.io/docs')">
                 <el-icon><Document /></el-icon> 文档
               </el-button>
-              <el-button text type="primary" @click="openLink('https://serverhub.io')">
+              <el-button text type="primary" @click="openLink('https://runixo.io')">
                 <el-icon><Monitor /></el-icon> 官网
               </el-button>
             </div>
@@ -706,7 +706,7 @@
               <el-tag>Go</el-tag>
               <el-tag>gRPC</el-tag>
             </div>
-            <p class="copyright">© 2024 ServerHub. MIT License.</p>
+            <p class="copyright">© 2024 Runixo. MIT License.</p>
           </div>
         </el-card>
       </el-tab-pane>
@@ -852,7 +852,7 @@ const settings = ref(JSON.parse(JSON.stringify(defaultSettings)))
 onMounted(() => { loadSettings() })
 
 function loadSettings() {
-  const saved = localStorage.getItem('serverhub_settings')
+  const saved = localStorage.getItem('runixo_settings')
   if (saved) {
     try {
       const parsed = JSON.parse(saved)
@@ -878,7 +878,7 @@ function loadSettings() {
 function saveSettings() {
   saving.value = true
   setTimeout(() => {
-    localStorage.setItem('serverhub_settings', JSON.stringify(settings.value))
+    localStorage.setItem('runixo_settings', JSON.stringify(settings.value))
     saving.value = false
     ElMessage.success('设置已保存')
   }, 300)
@@ -908,15 +908,15 @@ function testOllamaConnection() {
 function exportConfig() {
   const config = {
     settings: settings.value,
-    servers: JSON.parse(localStorage.getItem('serverhub_servers') || '[]'),
-    cloudProviders: JSON.parse(localStorage.getItem('serverhub_cloud_providers') || '{}'),
-    plugins: JSON.parse(localStorage.getItem('serverhub_plugins') || '[]')
+    servers: JSON.parse(localStorage.getItem('runixo_servers') || '[]'),
+    cloudProviders: JSON.parse(localStorage.getItem('runixo_cloud_providers') || '{}'),
+    plugins: JSON.parse(localStorage.getItem('runixo_plugins') || '[]')
   }
   const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `serverhub-config-${new Date().toISOString().split('T')[0]}.json`
+  a.download = `runixo-config-${new Date().toISOString().split('T')[0]}.json`
   a.click()
   URL.revokeObjectURL(url)
   ElMessage.success('配置已导出')
@@ -935,11 +935,11 @@ function importConfig() {
         const config = JSON.parse(ev.target?.result as string)
         if (config.settings) {
           settings.value = { ...defaultSettings, ...config.settings }
-          localStorage.setItem('serverhub_settings', JSON.stringify(config.settings))
+          localStorage.setItem('runixo_settings', JSON.stringify(config.settings))
         }
-        if (config.servers) localStorage.setItem('serverhub_servers', JSON.stringify(config.servers))
-        if (config.cloudProviders) localStorage.setItem('serverhub_cloud_providers', JSON.stringify(config.cloudProviders))
-        if (config.plugins) localStorage.setItem('serverhub_plugins', JSON.stringify(config.plugins))
+        if (config.servers) localStorage.setItem('runixo_servers', JSON.stringify(config.servers))
+        if (config.cloudProviders) localStorage.setItem('runixo_cloud_providers', JSON.stringify(config.cloudProviders))
+        if (config.plugins) localStorage.setItem('runixo_plugins', JSON.stringify(config.plugins))
         ElMessage.success('配置已导入')
       } catch { ElMessage.error('配置文件格式错误') }
     }
@@ -950,7 +950,7 @@ function importConfig() {
 
 function clearAIHistory() {
   ElMessageBox.confirm('确定要清除所有 AI 对话历史吗？', '确认').then(() => {
-    localStorage.removeItem('serverhub_ai_history')
+    localStorage.removeItem('runixo_ai_history')
     ElMessage.success('AI 对话历史已清除')
   }).catch(() => {})
 }
@@ -1054,7 +1054,7 @@ function manageSSHKeys() {
 
 function clearCredentials() {
   ElMessageBox.confirm('确定要清除所有保存的凭据吗？这将删除所有服务器的登录信息。', '警告', { type: 'warning' }).then(() => {
-    localStorage.removeItem('serverhub_credentials')
+    localStorage.removeItem('runixo_credentials')
     ElMessage.success('所有凭据已清除')
   }).catch(() => {})
 }
@@ -1143,7 +1143,7 @@ function viewAuditLog() {
 
 function clearAuditLog() {
   ElMessageBox.confirm('确定要清除所有审计日志吗？', '确认', { type: 'warning' }).then(() => {
-    localStorage.removeItem('serverhub_audit_log')
+    localStorage.removeItem('runixo_audit_log')
     ElMessage.success('审计日志已清除')
   }).catch(() => {})
 }
@@ -1161,7 +1161,7 @@ function selectBackupLocation() {
     })
   } else {
     // 非 Electron 环境下使用默认路径
-    settings.value.backup.backupLocation = '~/serverhub-backups'
+    settings.value.backup.backupLocation = '~/runixo-backups'
     ElMessage.info('已设置默认备份目录')
   }
 }
@@ -1172,14 +1172,14 @@ function createBackup() {
   setTimeout(() => {
     const config = {
       settings: settings.value,
-      servers: JSON.parse(localStorage.getItem('serverhub_servers') || '[]'),
-      cloudProviders: JSON.parse(localStorage.getItem('serverhub_cloud_providers') || '{}'),
-      plugins: JSON.parse(localStorage.getItem('serverhub_plugins') || '[]'),
+      servers: JSON.parse(localStorage.getItem('runixo_servers') || '[]'),
+      cloudProviders: JSON.parse(localStorage.getItem('runixo_cloud_providers') || '{}'),
+      plugins: JSON.parse(localStorage.getItem('runixo_plugins') || '[]'),
       timestamp: new Date().toISOString()
     }
 
     // 保存到备份列表
-    const backups = JSON.parse(localStorage.getItem('serverhub_backups') || '[]')
+    const backups = JSON.parse(localStorage.getItem('runixo_backups') || '[]')
     const backupName = `backup-${new Date().toISOString().replace(/[:.]/g, '-')}`
     backups.unshift({
       name: backupName,
@@ -1193,14 +1193,14 @@ function createBackup() {
       backups.pop()
     }
 
-    localStorage.setItem('serverhub_backups', JSON.stringify(backups))
+    localStorage.setItem('runixo_backups', JSON.stringify(backups))
     creatingBackup.value = false
     ElMessage.success('备份创建成功')
   }, 1000)
 }
 
 function showRestoreDialog() {
-  const backups = JSON.parse(localStorage.getItem('serverhub_backups') || '[]')
+  const backups = JSON.parse(localStorage.getItem('runixo_backups') || '[]')
 
   if (backups.length === 0) {
     ElMessage.warning('没有可用的备份')
@@ -1223,16 +1223,16 @@ function showRestoreDialog() {
     if (backup && backup.data) {
       if (backup.data.settings) {
         settings.value = { ...defaultSettings, ...backup.data.settings }
-        localStorage.setItem('serverhub_settings', JSON.stringify(backup.data.settings))
+        localStorage.setItem('runixo_settings', JSON.stringify(backup.data.settings))
       }
       if (backup.data.servers) {
-        localStorage.setItem('serverhub_servers', JSON.stringify(backup.data.servers))
+        localStorage.setItem('runixo_servers', JSON.stringify(backup.data.servers))
       }
       if (backup.data.cloudProviders) {
-        localStorage.setItem('serverhub_cloud_providers', JSON.stringify(backup.data.cloudProviders))
+        localStorage.setItem('runixo_cloud_providers', JSON.stringify(backup.data.cloudProviders))
       }
       if (backup.data.plugins) {
-        localStorage.setItem('serverhub_plugins', JSON.stringify(backup.data.plugins))
+        localStorage.setItem('runixo_plugins', JSON.stringify(backup.data.plugins))
       }
       ElMessage.success('备份已恢复')
     }

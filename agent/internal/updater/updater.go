@@ -94,7 +94,7 @@ func NewUpdater(currentVersion, dataDir string) (*Updater, error) {
 		config:         DefaultConfig(),
 		currentVersion: currentVersion,
 		dataDir:        dataDir,
-		updateURL:      "https://releases.serverhub.dev",
+		updateURL:      "https://api.runixo.dev",
 		ctx:            ctx,
 		cancel:         cancel,
 		progressChan:   make(chan *DownloadProgress, 10),
@@ -243,7 +243,8 @@ func (u *Updater) CheckUpdate() (*UpdateInfo, error) {
 		runtime.GOARCH,
 	)
 
-	resp, err := http.Get(url)
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("请求更新服务器失败: %w", err)
 	}
@@ -281,7 +282,7 @@ func (u *Updater) DownloadUpdate(version string, progressChan chan<- *DownloadPr
 	}
 
 	// 下载文件
-	downloadPath := filepath.Join(downloadDir, fmt.Sprintf("serverhub-agent-%s", version))
+	downloadPath := filepath.Join(downloadDir, fmt.Sprintf("runixo-agent-%s", version))
 	if runtime.GOOS == "windows" {
 		downloadPath += ".exe"
 	}
@@ -325,7 +326,8 @@ func (u *Updater) DownloadUpdate(version string, progressChan chan<- *DownloadPr
 
 // downloadFile 下载文件
 func (u *Updater) downloadFile(url, destPath string, totalSize int64, progressChan chan<- *DownloadProgress) error {
-	resp, err := http.Get(url)
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
@@ -377,7 +379,7 @@ func (u *Updater) downloadFile(url, destPath string, totalSize int64, progressCh
 // ApplyUpdate 应用更新
 func (u *Updater) ApplyUpdate(version string) error {
 	downloadDir := filepath.Join(u.dataDir, "downloads")
-	downloadPath := filepath.Join(downloadDir, fmt.Sprintf("serverhub-agent-%s", version))
+	downloadPath := filepath.Join(downloadDir, fmt.Sprintf("runixo-agent-%s", version))
 	if runtime.GOOS == "windows" {
 		downloadPath += ".exe"
 	}
@@ -417,7 +419,8 @@ func (u *Updater) ApplyUpdate(version string) error {
 
 	// 清理
 	os.Remove(downloadPath)
-	os.Remove(backupPath)
+	// 保留备份文件，下次更新时自动清理
+	log.Info().Str("backup", backupPath).Msg("备份已保留，可手动删除")
 
 	log.Info().Str("version", version).Msg("更新已应用，需要重启服务")
 
@@ -460,7 +463,7 @@ func (u *Updater) restartService() {
 
 	// 尝试使用 systemctl 重启
 	if runtime.GOOS == "linux" {
-		cmd := exec.Command("systemctl", "restart", "serverhub-agent")
+		cmd := exec.Command("systemctl", "restart", "runixo-agent")
 		if err := cmd.Run(); err != nil {
 			log.Warn().Err(err).Msg("systemctl 重启失败，尝试直接重启")
 		} else {

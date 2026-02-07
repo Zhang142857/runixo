@@ -1,4 +1,4 @@
-# ServerHub Agent 自动发布工作流
+# Runixo Agent 自动发布工作流
 #
 # 触发条件: 推送 v* 标签时自动构建并发布
 #
@@ -70,22 +70,22 @@ jobs:
         run: |
           cd agent
           go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }} -X main.buildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" \
-            -o ../serverhub-agent \
+            -o ../runixo-agent \
             ./cmd/agent
 
       - name: Package
         run: |
           mkdir -p dist
-          mv serverhub-agent dist/
+          mv runixo-agent dist/
           cd dist
-          tar -czf serverhub-agent_${{ matrix.suffix }}.tar.gz serverhub-agent
-          rm serverhub-agent
+          tar -czf runixo-agent_${{ matrix.suffix }}.tar.gz runixo-agent
+          rm runixo-agent
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: serverhub-agent_${{ matrix.suffix }}
-          path: dist/serverhub-agent_${{ matrix.suffix }}.tar.gz
+          name: runixo-agent_${{ matrix.suffix }}
+          path: dist/runixo-agent_${{ matrix.suffix }}.tar.gz
 
   release:
     name: Release
@@ -114,9 +114,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ServerHub Agent ${{ steps.version.outputs.VERSION }}
+          name: Runixo Agent ${{ steps.version.outputs.VERSION }}
           body: |
-            ## ServerHub Agent ${{ steps.version.outputs.VERSION }}
+            ## Runixo Agent ${{ steps.version.outputs.VERSION }}
 
             ### 一键安装
 
@@ -127,28 +127,28 @@ jobs:
             或指定版本:
 
             ```bash
-            SERVERHUB_VERSION=${{ steps.version.outputs.VERSION }} curl -fsSL https://cdn.jsdelivr.net/gh/${{ github.repository }}@main/scripts/install.sh | sudo bash
+            RUNIXO_VERSION=${{ steps.version.outputs.VERSION }} curl -fsSL https://cdn.jsdelivr.net/gh/${{ github.repository }}@main/scripts/install.sh | sudo bash
             ```
 
             ### 手动安装
 
             1. 下载对应平台的压缩包
-            2. 解压: `tar -xzf serverhub-agent_*.tar.gz`
-            3. 移动到 PATH: `sudo mv serverhub-agent /usr/local/bin/`
-            4. 创建配置文件: `sudo mkdir -p /etc/serverhub && sudo serverhub-agent --gen-token`
+            2. 解压: `tar -xzf runixo-agent_*.tar.gz`
+            3. 移动到 PATH: `sudo mv runixo-agent /usr/local/bin/`
+            4. 创建配置文件: `sudo mkdir -p /etc/runixo && sudo runixo-agent --gen-token`
             5. 创建 systemd 服务并启动
 
             ### 支持平台
 
             | 平台 | 架构 | 文件 |
             |------|------|------|
-            | Linux | x86_64 | serverhub-agent_linux_amd64.tar.gz |
-            | Linux | ARM64 | serverhub-agent_linux_arm64.tar.gz |
-            | Linux | ARMv7 | serverhub-agent_linux_armv7.tar.gz |
-            | Linux | x86 | serverhub-agent_linux_386.tar.gz |
-            | macOS | x86_64 | serverhub-agent_darwin_amd64.tar.gz |
-            | macOS | ARM64 (M1/M2) | serverhub-agent_darwin_arm64.tar.gz |
-            | FreeBSD | x86_64 | serverhub-agent_freebsd_amd64.tar.gz |
+            | Linux | x86_64 | runixo-agent_linux_amd64.tar.gz |
+            | Linux | ARM64 | runixo-agent_linux_arm64.tar.gz |
+            | Linux | ARMv7 | runixo-agent_linux_armv7.tar.gz |
+            | Linux | x86 | runixo-agent_linux_386.tar.gz |
+            | macOS | x86_64 | runixo-agent_darwin_amd64.tar.gz |
+            | macOS | ARM64 (M1/M2) | runixo-agent_darwin_arm64.tar.gz |
+            | FreeBSD | x86_64 | runixo-agent_freebsd_amd64.tar.gz |
 
             ### 校验和
 

@@ -47,6 +47,7 @@ interface LogLine {
 
 export class GrpcClient extends EventEmitter {
   private client: any
+  private updateClient: any
   private config: ServerConfig
   private connected: boolean = false
   private metadata: grpc.Metadata
@@ -73,10 +74,9 @@ export class GrpcClient extends EventEmitter {
       ? grpc.credentials.createSsl()
       : grpc.credentials.createInsecure()
 
-    this.client = new proto.serverhub.AgentService(
-      `${this.config.host}:${this.config.port}`,
-      credentials
-    )
+    const address = `${this.config.host}:${this.config.port}`
+    this.client = new proto.runixo.AgentService(address, credentials)
+    this.updateClient = new proto.runixo.UpdateService(address, credentials)
 
     // 测试连接
     return new Promise((resolve, reject) => {
@@ -425,6 +425,28 @@ export class GrpcClient extends EventEmitter {
 
       call.on('error', (err: Error) => {
         reject(err)
+      })
+    })
+  }
+
+  // ==================== 更新服务 ====================
+
+  async checkUpdate(): Promise<{
+    available: boolean; current_version: string; latest_version: string
+    release_notes: string; download_url: string; size: number
+    checksum: string; release_date: string; is_critical: boolean
+  }> {
+    return new Promise((resolve, reject) => {
+      this.updateClient.CheckUpdate({}, this.metadata, (err: Error | null, res: any) => {
+        err ? reject(err) : resolve(res)
+      })
+    })
+  }
+
+  async applyUpdate(version: string): Promise<ActionResponse> {
+    return new Promise((resolve, reject) => {
+      this.updateClient.ApplyUpdate({ version }, this.metadata, (err: Error | null, res: any) => {
+        err ? reject(err) : resolve(res)
       })
     })
   }

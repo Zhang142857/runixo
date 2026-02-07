@@ -5,6 +5,7 @@ import { setupPluginIPC } from './plugins/api-bridge'
 import { setupBackupHandlers } from './ipc/backup-handlers'
 import { setupTaskHandlers, initTaskScheduler } from './ipc/task-handlers'
 import { setupAppStoreHandlers, initAppStore } from './ipc/app-store-handlers'
+import { registerSshHandlers } from './ipc/ssh-install'
 
 // 禁用硬件加速（可选，某些系统上可能需要）
 // app.disableHardwareAcceleration()
@@ -19,7 +20,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: 'ServerHub',
+    title: 'Runixo',
     icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -84,6 +85,7 @@ app.whenReady().then(async () => {
   setupBackupHandlers(serverConnections)
   setupTaskHandlers()
   setupAppStoreHandlers(serverConnections)
+  registerSshHandlers()
   
   // 初始化任务调度器和应用商店
   await initTaskScheduler()

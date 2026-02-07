@@ -1,4 +1,4 @@
-# ServerHub
+# Runixo
 
 <p align="center">
   <strong>AI-Native 服务器管理平台</strong>
@@ -22,7 +22,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        ServerHub Client                          │
+│                        Runixo Client                          │
 │                         (Electron)                               │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
@@ -34,7 +34,7 @@
                             │ gRPC (TLS加密)
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     ServerHub Agent                              │
+│                     Runixo Agent                              │
 │                    (Go 单二进制)                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
@@ -53,38 +53,38 @@
 
 ```bash
 # Linux/macOS
-curl -fsSL https://serverhub.io/install.sh | bash
+curl -fsSL https://runixo.io/install.sh | bash
 
 # 或手动安装
-wget https://github.com/serverhub/serverhub/releases/latest/download/serverhub-agent-linux-amd64
-chmod +x serverhub-agent-linux-amd64
-sudo mv serverhub-agent-linux-amd64 /usr/local/bin/serverhub-agent
+wget https://github.com/runixo/runixo/releases/latest/download/runixo-agent-linux-amd64
+chmod +x runixo-agent-linux-amd64
+sudo mv runixo-agent-linux-amd64 /usr/local/bin/runixo-agent
 ```
 
 生成认证令牌：
 
 ```bash
-serverhub-agent --gen-token
+runixo-agent --gen-token
 ```
 
 启动 Agent：
 
 ```bash
 # 使用 systemd
-sudo systemctl enable serverhub-agent
-sudo systemctl start serverhub-agent
+sudo systemctl enable runixo-agent
+sudo systemctl start runixo-agent
 
 # 或直接运行
-serverhub-agent --config /etc/serverhub/agent.yaml
+runixo-agent --config /etc/runixo/agent.yaml
 ```
 
 ### 安装客户端
 
-从 [Releases](https://github.com/serverhub/serverhub/releases) 下载对应平台的客户端：
+从 [Releases](https://github.com/runixo/runixo/releases) 下载对应平台的客户端：
 
-- Windows: `ServerHub-Setup-x.x.x.exe`
-- macOS: `ServerHub-x.x.x.dmg`
-- Linux: `ServerHub-x.x.x.AppImage`
+- Windows: `Runixo-Setup-x.x.x.exe`
+- macOS: `Runixo-x.x.x.dmg`
+- Linux: `Runixo-x.x.x.AppImage`
 
 ## 🛠️ 开发
 
@@ -119,13 +119,13 @@ pnpm build
 
 # 构建 Agent
 cd agent
-go build -o serverhub-agent cmd/agent/main.go
+go build -o runixo-agent cmd/agent/main.go
 ```
 
 ## 📁 项目结构
 
 ```
-serverhub/
+runixo/
 ├── client/                      # Electron 客户端
 │   ├── src/
 │   │   ├── main/               # Electron 主进程
@@ -156,7 +156,7 @@ serverhub/
 
 ## 🔌 插件开发
 
-ServerHub 支持通过插件扩展功能。插件可以：
+Runixo 支持通过插件扩展功能。插件可以：
 
 - 添加新的 UI 页面和组件
 - 扩展 Agent 命令

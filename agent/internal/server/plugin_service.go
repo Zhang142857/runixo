@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	pb "github.com/serverhub/agent/api/proto"
-	"github.com/serverhub/agent/internal/plugin"
+	pb "github.com/runixo/agent/api/proto"
+	"github.com/runixo/agent/internal/plugin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -163,7 +163,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Name:        "Cloudflare 安全防护",
 			Version:     "1.0.0",
 			Description: "集成 Cloudflare 安全功能，自动封禁恶意 IP，防 DDoS 攻击。24/7 全天候运行在服务器上。",
-			Author:      "ServerHub",
+			Author:      "Runixo",
 			Icon:        "🛡️",
 			Type:        pb.PluginType_PLUGIN_AGENT,
 			Downloads:   5200,
@@ -172,7 +172,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Tags:        []string{"安全", "Cloudflare", "防火墙", "DDoS"},
 			Category:    "security",
 			Official:    true,
-			DownloadUrl: "https://plugins.serverhub.dev/cloudflare-security",
+			DownloadUrl: "https://plugins.runixo.dev/cloudflare-security",
 			UpdatedAt:   "2024-01-20",
 		},
 		{
@@ -180,7 +180,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Name:        "Nginx 管理",
 			Version:     "1.0.0",
 			Description: "可视化管理 Nginx 配置、虚拟主机和 SSL 证书",
-			Author:      "ServerHub",
+			Author:      "Runixo",
 			Icon:        "🌐",
 			Type:        pb.PluginType_PLUGIN_HYBRID,
 			Downloads:   6200,
@@ -189,7 +189,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Tags:        []string{"Web服务器", "Nginx", "反向代理"},
 			Category:    "web",
 			Official:    true,
-			DownloadUrl: "https://plugins.serverhub.dev/nginx-manager",
+			DownloadUrl: "https://plugins.runixo.dev/nginx-manager",
 			UpdatedAt:   "2024-01-15",
 		},
 		{
@@ -197,7 +197,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Name:        "MySQL 管理",
 			Version:     "1.0.0",
 			Description: "数据库管理、备份恢复、性能监控",
-			Author:      "ServerHub",
+			Author:      "Runixo",
 			Icon:        "🗄️",
 			Type:        pb.PluginType_PLUGIN_HYBRID,
 			Downloads:   5100,
@@ -206,7 +206,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Tags:        []string{"数据库", "MySQL", "SQL"},
 			Category:    "database",
 			Official:    true,
-			DownloadUrl: "https://plugins.serverhub.dev/mysql-manager",
+			DownloadUrl: "https://plugins.runixo.dev/mysql-manager",
 			UpdatedAt:   "2024-01-10",
 		},
 		{
@@ -214,7 +214,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Name:        "自动备份",
 			Version:     "1.0.0",
 			Description: "定时备份文件和数据库到本地或云存储。在服务器上 24/7 运行。",
-			Author:      "ServerHub",
+			Author:      "Runixo",
 			Icon:        "💾",
 			Type:        pb.PluginType_PLUGIN_AGENT,
 			Downloads:   4200,
@@ -223,7 +223,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Tags:        []string{"备份", "定时任务", "云存储"},
 			Category:    "tools",
 			Official:    true,
-			DownloadUrl: "https://plugins.serverhub.dev/backup-manager",
+			DownloadUrl: "https://plugins.runixo.dev/backup-manager",
 			UpdatedAt:   "2024-01-05",
 		},
 		{
@@ -231,7 +231,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Name:        "高级监控",
 			Version:     "1.0.0",
 			Description: "详细的性能监控、告警通知、历史数据。在服务器上持续收集数据。",
-			Author:      "ServerHub",
+			Author:      "Runixo",
 			Icon:        "📊",
 			Type:        pb.PluginType_PLUGIN_AGENT,
 			Downloads:   5600,
@@ -240,7 +240,7 @@ func (s *PluginServer) GetAvailablePlugins(ctx context.Context, req *pb.Empty) (
 			Tags:        []string{"监控", "告警", "性能"},
 			Category:    "monitor",
 			Official:    true,
-			DownloadUrl: "https://plugins.serverhub.dev/advanced-monitor",
+			DownloadUrl: "https://plugins.runixo.dev/advanced-monitor",
 			UpdatedAt:   "2024-01-03",
 		},
 	}

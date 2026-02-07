@@ -714,7 +714,7 @@ function formatDate(dateStr: string): string {
     }
 
     .file-icon {
-      color: #909399;
+      color: var(--text-muted);
       font-size: 18px;
     }
   }

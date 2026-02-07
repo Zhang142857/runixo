@@ -61,7 +61,7 @@ export class BackupEngine {
       this.log(record, `开始备份: ${strategy.name}`)
 
       // 创建临时目录
-      const tempDir = `/tmp/serverhub-backup-${record.id}`
+      const tempDir = `/tmp/runixo-backup-${record.id}`
       await this.grpcClient.executeCommand('mkdir', ['-p', tempDir])
       this.log(record, `创建临时目录: ${tempDir}`)
 

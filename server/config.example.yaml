@@ -1,0 +1,29 @@
+# Runixo Official Server Configuration
+
+server:
+  port: 8080
+  # 如果部署在 Cloudflare/Nginx 后面，设置信任的代理 IP
+  trusted_proxies:
+    - "127.0.0.1"
+    - "172.16.0.0/12"
+  read_timeout_seconds: 10
+  write_timeout_seconds: 10
+
+database:
+  path: "data/runixo.db"
+
+# 速率限制 - 防止滥用
+rate_limit:
+  requests_per_minute: 60    # 每 IP 每分钟请求数
+  burst_size: 10             # 突发请求允许量
+  ban_threshold: 300         # 触发封禁的请求数/分钟
+  ban_duration_minutes: 30   # 封禁时长
+
+# GitHub Releases - 用于文件下载重定向
+github:
+  owner: "runixo"
+  repo: "runixo"
+
+# CDN 配置 (可选，优先于 GitHub)
+cdn:
+  base_url: ""  # 例如: https://cdn.runixo.io/releases

@@ -79,7 +79,7 @@ export class AIGateway extends EventEmitter implements AIProvider {
   private toolExecutor: ToolExecutor | null = null
   private maxToolCalls: number = 10
 
-  private systemPrompt: string = `你是 ServerHub AI 助手，一个专业的服务器运维助手。你可以帮助用户：
+  private systemPrompt: string = `你是 Runixo AI 助手，一个专业的服务器运维助手。你可以帮助用户：
 - 执行服务器命令
 - 管理 Docker 容器和镜像
 - 分析系统日志和性能指标

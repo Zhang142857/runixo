@@ -12,12 +12,12 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	pb "github.com/serverhub/agent/api/proto"
-	"github.com/serverhub/agent/internal/api"
-	"github.com/serverhub/agent/internal/auth"
-	"github.com/serverhub/agent/internal/plugin"
-	"github.com/serverhub/agent/internal/server"
-	"github.com/serverhub/agent/internal/updater"
+	pb "github.com/runixo/agent/api/proto"
+	"github.com/runixo/agent/internal/api"
+	"github.com/runixo/agent/internal/auth"
+	"github.com/runixo/agent/internal/plugin"
+	"github.com/runixo/agent/internal/server"
+	"github.com/runixo/agent/internal/updater"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -30,13 +30,13 @@ var (
 
 func main() {
 	// 命令行参数
-	configFile := flag.String("config", "/etc/serverhub/agent.yaml", "配置文件路径")
+	configFile := flag.String("config", "/etc/runixo/agent.yaml", "配置文件路径")
 	showVersion := flag.Bool("version", false, "显示版本信息")
 	genToken := flag.Bool("gen-token", false, "生成新的认证令牌")
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("ServerHub Agent v%s (built: %s)\n", version, buildTime)
+		fmt.Printf("Runixo Agent v%s (built: %s)\n", version, buildTime)
 		os.Exit(0)
 	}
 
@@ -85,8 +85,8 @@ func loadConfig(configFile string) error {
 	viper.SetDefault("auth.token", "")
 	viper.SetDefault("metrics.interval", 2)
 	viper.SetDefault("log.level", "info")
-	viper.SetDefault("data.dir", "/var/lib/serverhub")
-	viper.SetDefault("plugins.dir", "/var/lib/serverhub/plugins")
+	viper.SetDefault("data.dir", "/var/lib/runixo")
+	viper.SetDefault("plugins.dir", "/var/lib/runixo/plugins")
 	viper.SetDefault("update.auto", false)
 	viper.SetDefault("update.channel", "stable")
 	viper.SetDefault("update.interval", 3600)
@@ -231,7 +231,7 @@ func run() error {
 		Str("grpc", addr).
 		Str("api", apiAddr).
 		Bool("auto_update", viper.GetBool("update.auto")).
-		Msg("ServerHub Agent 已启动")
+		Msg("Runixo Agent 已启动")
 
 	// 启动 REST API 服务器
 	go func() {

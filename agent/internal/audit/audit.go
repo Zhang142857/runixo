@@ -73,7 +73,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Enabled:        true,
-		LogPath:        "/var/log/serverhub/audit.log",
+		LogPath:        "/var/log/runixo/audit.log",
 		MaxSizeMB:      50,
 		MaxBackups:     5,
 		MinLevel:       LevelInfo,

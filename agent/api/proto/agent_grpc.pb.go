@@ -19,24 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	AgentService_Authenticate_FullMethodName     = "/serverhub.AgentService/Authenticate"
-	AgentService_GetSystemInfo_FullMethodName    = "/serverhub.AgentService/GetSystemInfo"
-	AgentService_GetMetrics_FullMethodName       = "/serverhub.AgentService/GetMetrics"
-	AgentService_ExecuteCommand_FullMethodName   = "/serverhub.AgentService/ExecuteCommand"
-	AgentService_ExecuteShell_FullMethodName     = "/serverhub.AgentService/ExecuteShell"
-	AgentService_ReadFile_FullMethodName         = "/serverhub.AgentService/ReadFile"
-	AgentService_WriteFile_FullMethodName        = "/serverhub.AgentService/WriteFile"
-	AgentService_ListDirectory_FullMethodName    = "/serverhub.AgentService/ListDirectory"
-	AgentService_DeleteFile_FullMethodName       = "/serverhub.AgentService/DeleteFile"
-	AgentService_UploadFile_FullMethodName       = "/serverhub.AgentService/UploadFile"
-	AgentService_DownloadFile_FullMethodName     = "/serverhub.AgentService/DownloadFile"
-	AgentService_TailLog_FullMethodName          = "/serverhub.AgentService/TailLog"
-	AgentService_ListServices_FullMethodName     = "/serverhub.AgentService/ListServices"
-	AgentService_ServiceAction_FullMethodName    = "/serverhub.AgentService/ServiceAction"
-	AgentService_ListProcesses_FullMethodName    = "/serverhub.AgentService/ListProcesses"
-	AgentService_KillProcess_FullMethodName      = "/serverhub.AgentService/KillProcess"
-	AgentService_SearchDockerHub_FullMethodName  = "/serverhub.AgentService/SearchDockerHub"
-	AgentService_ProxyHttpRequest_FullMethodName = "/serverhub.AgentService/ProxyHttpRequest"
+	AgentService_Authenticate_FullMethodName     = "/runixo.AgentService/Authenticate"
+	AgentService_GetSystemInfo_FullMethodName    = "/runixo.AgentService/GetSystemInfo"
+	AgentService_GetMetrics_FullMethodName       = "/runixo.AgentService/GetMetrics"
+	AgentService_ExecuteCommand_FullMethodName   = "/runixo.AgentService/ExecuteCommand"
+	AgentService_ExecuteShell_FullMethodName     = "/runixo.AgentService/ExecuteShell"
+	AgentService_ReadFile_FullMethodName         = "/runixo.AgentService/ReadFile"
+	AgentService_WriteFile_FullMethodName        = "/runixo.AgentService/WriteFile"
+	AgentService_ListDirectory_FullMethodName    = "/runixo.AgentService/ListDirectory"
+	AgentService_DeleteFile_FullMethodName       = "/runixo.AgentService/DeleteFile"
+	AgentService_UploadFile_FullMethodName       = "/runixo.AgentService/UploadFile"
+	AgentService_DownloadFile_FullMethodName     = "/runixo.AgentService/DownloadFile"
+	AgentService_TailLog_FullMethodName          = "/runixo.AgentService/TailLog"
+	AgentService_ListServices_FullMethodName     = "/runixo.AgentService/ListServices"
+	AgentService_ServiceAction_FullMethodName    = "/runixo.AgentService/ServiceAction"
+	AgentService_ListProcesses_FullMethodName    = "/runixo.AgentService/ListProcesses"
+	AgentService_KillProcess_FullMethodName      = "/runixo.AgentService/KillProcess"
+	AgentService_SearchDockerHub_FullMethodName  = "/runixo.AgentService/SearchDockerHub"
+	AgentService_ProxyHttpRequest_FullMethodName = "/runixo.AgentService/ProxyHttpRequest"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -820,7 +820,7 @@ func _AgentService_ProxyHttpRequest_Handler(srv interface{}, ctx context.Context
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AgentService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "serverhub.AgentService",
+	ServiceName: "runixo.AgentService",
 	HandlerType: (*AgentServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

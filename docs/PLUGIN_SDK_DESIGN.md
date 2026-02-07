@@ -1,15 +1,15 @@
 # 插件SDK详细设计方案
 
-> ServerHub插件开发工具包完整设计
+> Runixo插件开发工具包完整设计
 
 ---
 
 ## 📦 SDK包结构
 
-### 1. @serverhub/plugin-sdk (核心SDK)
+### 1. runixo-plugin-sdk (核心SDK)
 
 ```
-@serverhub/plugin-sdk/
+runixo-plugin-sdk/
 ├── src/
 │   ├── core/
 │   │   ├── Plugin.ts           # 插件基类
@@ -32,12 +32,12 @@
 └── README.md
 ```
 
-### 2. @serverhub/plugin-cli (开发工具)
+### 2. runixo-plugin-cli (开发工具)
 
 ```
-@serverhub/plugin-cli/
+runixo-plugin-cli/
 ├── bin/
-│   └── serverhub-plugin.js     # CLI入口
+│   └── runixo-plugin.js     # CLI入口
 ├── src/
 │   ├── commands/
 │   │   ├── create.ts           # 创建插件
@@ -50,10 +50,10 @@
 └── package.json
 ```
 
-### 3. @serverhub/plugin-types (类型定义)
+### 3. runixo-plugin-types (类型定义)
 
 ```
-@serverhub/plugin-types/
+runixo-plugin-types/
 ├── index.d.ts
 ├── plugin.d.ts
 ├── context.d.ts
@@ -559,10 +559,10 @@ export interface RouteDefinition {
 
 ```bash
 # 使用交互式向导创建插件
-npx @serverhub/plugin-cli create
+npx runixo-plugin-cli create
 
 # 或指定模板
-npx @serverhub/plugin-cli create --template=cloud-service my-plugin
+npx runixo-plugin-cli create --template=cloud-service my-plugin
 ```
 
 ### 开发模式
@@ -595,7 +595,7 @@ npm test
 ```bash
 npm run publish
 
-# 发布到ServerHub插件市场
+# 发布到Runixo插件市场
 ```
 
 ---
@@ -605,7 +605,7 @@ npm run publish
 ### 基础插件示例
 
 ```typescript
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class MyPlugin extends Plugin {
   constructor(context: PluginContext) {
@@ -668,7 +668,7 @@ export default class MyPlugin extends Plugin {
 ### 云服务插件示例
 
 ```typescript
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class CloudServicePlugin extends Plugin {
   private apiToken: string | null = null

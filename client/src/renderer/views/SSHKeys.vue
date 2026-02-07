@@ -573,7 +573,7 @@ async function generateKey() {
     // 构建 ssh-keygen 命令
     const keyPath = `~/.ssh/${generateForm.value.name}`
     const keyType = generateForm.value.type
-    const comment = generateForm.value.comment || `${generateForm.value.name}@serverhub`
+    const comment = generateForm.value.comment || `${generateForm.value.name}@runixo`
     const passphrase = generateForm.value.passphrase || ''
     
     let cmd = `ssh-keygen -t ${keyType}`

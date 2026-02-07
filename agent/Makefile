@@ -1,8 +1,8 @@
-# ServerHub Agent Makefile
+# Runixo Agent Makefile
 
 VERSION ?= v0.1.0
 BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
-BINARY_NAME := serverhub-agent
+BINARY_NAME := runixo-agent
 BUILD_DIR := ../dist
 
 # Go 参数
@@ -85,7 +85,7 @@ fmt:
 
 ## help: 显示帮助
 help:
-	@echo "ServerHub Agent Makefile"
+	@echo "Runixo Agent Makefile"
 	@echo ""
 	@echo "用法: make [target]"
 	@echo ""

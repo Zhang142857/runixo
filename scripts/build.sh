@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# ServerHub Agent 跨平台构建脚本
+# Runixo Agent 跨平台构建脚本
 #
 # 使用方法:
 #   ./scripts/build.sh [version]
@@ -12,7 +12,7 @@
 set -e
 
 # 配置
-BINARY_NAME="serverhub-agent"
+BINARY_NAME="runixo-agent"
 BUILD_DIR="dist"
 VERSION="${1:-v0.1.0}"
 BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
@@ -100,7 +100,7 @@ generate_checksums() {
 main() {
     echo ""
     echo "========================================"
-    echo "  ServerHub Agent 构建脚本"
+    echo "  Runixo Agent 构建脚本"
     echo "  版本: ${VERSION}"
     echo "========================================"
     echo ""

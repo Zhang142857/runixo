@@ -35,47 +35,47 @@ func NewPluginServiceClient(cc grpc.ClientConnInterface) PluginServiceClient {
 
 func (c *pluginServiceClient) ListPlugins(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PluginList, error) {
 	out := new(PluginList)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/ListPlugins", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/ListPlugins", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) InstallPlugin(ctx context.Context, in *InstallPluginRequest, opts ...grpc.CallOption) (*ActionResponse, error) {
 	out := new(ActionResponse)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/InstallPlugin", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/InstallPlugin", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) UninstallPlugin(ctx context.Context, in *PluginRequest, opts ...grpc.CallOption) (*ActionResponse, error) {
 	out := new(ActionResponse)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/UninstallPlugin", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/UninstallPlugin", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) EnablePlugin(ctx context.Context, in *PluginRequest, opts ...grpc.CallOption) (*ActionResponse, error) {
 	out := new(ActionResponse)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/EnablePlugin", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/EnablePlugin", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) DisablePlugin(ctx context.Context, in *PluginRequest, opts ...grpc.CallOption) (*ActionResponse, error) {
 	out := new(ActionResponse)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/DisablePlugin", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/DisablePlugin", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) GetPluginConfig(ctx context.Context, in *PluginRequest, opts ...grpc.CallOption) (*PluginConfig, error) {
 	out := new(PluginConfig)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/GetPluginConfig", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/GetPluginConfig", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) SetPluginConfig(ctx context.Context, in *SetPluginConfigRequest, opts ...grpc.CallOption) (*ActionResponse, error) {
 	out := new(ActionResponse)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/SetPluginConfig", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/SetPluginConfig", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) GetPluginStatus(ctx context.Context, in *PluginRequest, opts ...grpc.CallOption) (*PluginStatusMsg, error) {
 	out := new(PluginStatusMsg)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/GetPluginStatus", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/GetPluginStatus", in, out, opts...)
 	return out, err
 }
 func (c *pluginServiceClient) GetAvailablePlugins(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*AvailablePluginList, error) {
 	out := new(AvailablePluginList)
-	err := c.cc.Invoke(ctx, "/serverhub.PluginService/GetAvailablePlugins", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/runixo.PluginService/GetAvailablePlugins", in, out, opts...)
 	return out, err
 }
 
@@ -129,7 +129,7 @@ type UnsafePluginServiceServer interface {
 }
 
 var _PluginService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "serverhub.PluginService",
+	ServiceName: "runixo.PluginService",
 	HandlerType: (*PluginServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{MethodName: "ListPlugins", Handler: _PluginService_ListPlugins_Handler},
@@ -158,7 +158,7 @@ func _PluginService_ListPlugins_Handler(srv interface{}, ctx context.Context, de
 	if interceptor == nil {
 		return srv.(PluginServiceServer).ListPlugins(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/ListPlugins"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/ListPlugins"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).ListPlugins(ctx, req.(*Empty))
 	})
@@ -171,7 +171,7 @@ func _PluginService_InstallPlugin_Handler(srv interface{}, ctx context.Context, 
 	if interceptor == nil {
 		return srv.(PluginServiceServer).InstallPlugin(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/InstallPlugin"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/InstallPlugin"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).InstallPlugin(ctx, req.(*InstallPluginRequest))
 	})
@@ -184,7 +184,7 @@ func _PluginService_UninstallPlugin_Handler(srv interface{}, ctx context.Context
 	if interceptor == nil {
 		return srv.(PluginServiceServer).UninstallPlugin(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/UninstallPlugin"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/UninstallPlugin"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).UninstallPlugin(ctx, req.(*PluginRequest))
 	})
@@ -197,7 +197,7 @@ func _PluginService_EnablePlugin_Handler(srv interface{}, ctx context.Context, d
 	if interceptor == nil {
 		return srv.(PluginServiceServer).EnablePlugin(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/EnablePlugin"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/EnablePlugin"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).EnablePlugin(ctx, req.(*PluginRequest))
 	})
@@ -210,7 +210,7 @@ func _PluginService_DisablePlugin_Handler(srv interface{}, ctx context.Context, 
 	if interceptor == nil {
 		return srv.(PluginServiceServer).DisablePlugin(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/DisablePlugin"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/DisablePlugin"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).DisablePlugin(ctx, req.(*PluginRequest))
 	})
@@ -223,7 +223,7 @@ func _PluginService_GetPluginConfig_Handler(srv interface{}, ctx context.Context
 	if interceptor == nil {
 		return srv.(PluginServiceServer).GetPluginConfig(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/GetPluginConfig"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/GetPluginConfig"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).GetPluginConfig(ctx, req.(*PluginRequest))
 	})
@@ -236,7 +236,7 @@ func _PluginService_SetPluginConfig_Handler(srv interface{}, ctx context.Context
 	if interceptor == nil {
 		return srv.(PluginServiceServer).SetPluginConfig(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/SetPluginConfig"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/SetPluginConfig"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).SetPluginConfig(ctx, req.(*SetPluginConfigRequest))
 	})
@@ -249,7 +249,7 @@ func _PluginService_GetPluginStatus_Handler(srv interface{}, ctx context.Context
 	if interceptor == nil {
 		return srv.(PluginServiceServer).GetPluginStatus(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/GetPluginStatus"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/GetPluginStatus"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).GetPluginStatus(ctx, req.(*PluginRequest))
 	})
@@ -262,7 +262,7 @@ func _PluginService_GetAvailablePlugins_Handler(srv interface{}, ctx context.Con
 	if interceptor == nil {
 		return srv.(PluginServiceServer).GetAvailablePlugins(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.PluginService/GetAvailablePlugins"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.PluginService/GetAvailablePlugins"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PluginServiceServer).GetAvailablePlugins(ctx, req.(*Empty))
 	})
@@ -340,7 +340,7 @@ func (x *updateServiceDownloadUpdateClient) Recv() (*DownloadProgress, error) {
 }
 
 var _UpdateService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "serverhub.UpdateService",
+	ServiceName: "runixo.UpdateService",
 	HandlerType: (*UpdateServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{MethodName: "CheckUpdate", Handler: _UpdateService_CheckUpdate_Handler},
@@ -371,7 +371,7 @@ func _UpdateService_CheckUpdate_Handler(srv interface{}, ctx context.Context, de
 	if interceptor == nil {
 		return srv.(UpdateServiceServer).CheckUpdate(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.UpdateService/CheckUpdate"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.UpdateService/CheckUpdate"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UpdateServiceServer).CheckUpdate(ctx, req.(*Empty))
 	})
@@ -391,7 +391,7 @@ func _UpdateService_ApplyUpdate_Handler(srv interface{}, ctx context.Context, de
 	if interceptor == nil {
 		return srv.(UpdateServiceServer).ApplyUpdate(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.UpdateService/ApplyUpdate"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.UpdateService/ApplyUpdate"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UpdateServiceServer).ApplyUpdate(ctx, req.(*UpdateRequest))
 	})
@@ -404,7 +404,7 @@ func _UpdateService_GetUpdateConfig_Handler(srv interface{}, ctx context.Context
 	if interceptor == nil {
 		return srv.(UpdateServiceServer).GetUpdateConfig(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.UpdateService/GetUpdateConfig"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.UpdateService/GetUpdateConfig"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UpdateServiceServer).GetUpdateConfig(ctx, req.(*Empty))
 	})
@@ -417,7 +417,7 @@ func _UpdateService_SetUpdateConfig_Handler(srv interface{}, ctx context.Context
 	if interceptor == nil {
 		return srv.(UpdateServiceServer).SetUpdateConfig(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.UpdateService/SetUpdateConfig"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.UpdateService/SetUpdateConfig"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UpdateServiceServer).SetUpdateConfig(ctx, req.(*UpdateConfig))
 	})
@@ -430,7 +430,7 @@ func _UpdateService_GetUpdateHistory_Handler(srv interface{}, ctx context.Contex
 	if interceptor == nil {
 		return srv.(UpdateServiceServer).GetUpdateHistory(ctx, in)
 	}
-	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/serverhub.UpdateService/GetUpdateHistory"}
+	info := &grpc.UnaryServerInfo{Server: srv, FullMethod: "/runixo.UpdateService/GetUpdateHistory"}
 	return interceptor(ctx, in, info, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UpdateServiceServer).GetUpdateHistory(ctx, req.(*Empty))
 	})

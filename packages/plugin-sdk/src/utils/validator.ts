@@ -2,7 +2,7 @@
  * 插件清单验证器
  * 验证 plugin.json 的格式和内容
  */
-import { PluginMetadata } from '@serverhub/plugin-types'
+import { PluginMetadata } from 'runixo-plugin-types'
 
 export interface ValidationResult {
   valid: boolean

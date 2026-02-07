@@ -361,7 +361,7 @@ export class ReActEngine extends EventEmitter {
       .map(t => `- ${t.name}: ${t.description}${t.dangerous ? ' [危险操作]' : ''}`)
       .join('\n')
 
-    return context.systemPrompt || `你是 ServerHub AI 助手，一个专业的服务器运维助手。你运行在 Agent 模式下，可以直接操作服务器执行任务。
+    return context.systemPrompt || `你是 Runixo AI 助手，一个专业的服务器运维助手。你运行在 Agent 模式下，可以直接操作服务器执行任务。
 
 ## 可用工具
 ${toolDescriptions}

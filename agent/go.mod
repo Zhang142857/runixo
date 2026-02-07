@@ -1,4 +1,4 @@
-module github.com/serverhub/agent
+module github.com/runixo/agent
 
 go 1.22.0
 

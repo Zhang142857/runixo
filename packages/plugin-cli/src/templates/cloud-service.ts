@@ -16,20 +16,20 @@ export async function generateCloudServicePlugin(pluginDir: string, config: Plug
 
   // 生成 package.json
   const packageJson = {
-    name: `@serverhub/plugin-${config.id}`,
+    name: `@runixo/plugin-${config.id}`,
     version: config.version,
     description: config.description,
     main: 'dist/main/index.js',
     scripts: {
       build: 'tsc',
       watch: 'tsc --watch',
-      dev: 'serverhub-plugin dev'
+      dev: 'runixo-plugin dev'
     },
     dependencies: {
-      '@serverhub/plugin-sdk': '^1.0.0'
+      'runixo-plugin-sdk': '^1.0.0'
     },
     devDependencies: {
-      '@serverhub/plugin-cli': '^1.0.0',
+      'runixo-plugin-cli': '^1.0.0',
       'typescript': '^5.3.0'
     }
   }
@@ -88,7 +88,7 @@ export async function generateCloudServicePlugin(pluginDir: string, config: Plug
   await fs.writeJSON(path.join(pluginDir, 'tsconfig.json'), tsconfig, { spaces: 2 })
 
   // 生成主入口文件
-  const mainIndex = `import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+  const mainIndex = `import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class ${toPascalCase(config.id)}Plugin extends Plugin {
   private apiToken: string | null = null

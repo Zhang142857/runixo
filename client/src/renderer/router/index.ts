@@ -52,6 +52,12 @@ const staticRoutes: RouteRecordRaw[] = [
     meta: { title: '环境管理', icon: 'Box' }
   },
   {
+    path: '/software-store',
+    name: 'SoftwareStore',
+    component: () => import('../views/SoftwareStore.vue'),
+    meta: { title: '软件商城', icon: 'Shop' }
+  },
+  {
     path: '/monitor',
     name: 'Monitor',
     component: () => import('../views/Monitor.vue'),
@@ -161,6 +167,12 @@ const staticRoutes: RouteRecordRaw[] = [
     name: 'NetworkTools',
     component: () => import('../views/NetworkTools.vue'),
     meta: { title: '网络工具', icon: 'Connection' }
+  },
+  {
+    path: '/firewall',
+    name: 'Firewall',
+    component: () => import('../views/Firewall.vue'),
+    meta: { title: '防火墙', icon: 'Shield' }
   },
   {
     path: '/backup',

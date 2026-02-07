@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/serverhub/agent/internal/collector"
+	"github.com/runixo/agent/internal/collector"
 )
 
 // Server REST API 服务器
@@ -107,7 +107,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	s.jsonResponse(w, map[string]string{
 		"version": s.version,
-		"name":    "ServerHub Agent",
+		"name":    "Runixo Agent",
 	})
 }
 

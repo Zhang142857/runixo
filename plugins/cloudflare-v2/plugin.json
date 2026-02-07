@@ -3,7 +3,7 @@
   "name": "Cloudflare 管理",
   "version": "2.0.0",
   "description": "Cloudflare DNS、CDN、WAF、SSL证书、Tunnel 管理",
-  "author": "ServerHub",
+  "author": "Runixo",
   "icon": "☁️",
   "category": "cloud-service",
   "main": "dist/main/index.js",

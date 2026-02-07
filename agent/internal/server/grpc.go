@@ -14,10 +14,10 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/rs/zerolog/log"
-	pb "github.com/serverhub/agent/api/proto"
-	"github.com/serverhub/agent/internal/collector"
-	"github.com/serverhub/agent/internal/executor"
-	"github.com/serverhub/agent/internal/security"
+	pb "github.com/runixo/agent/api/proto"
+	"github.com/runixo/agent/internal/collector"
+	"github.com/runixo/agent/internal/executor"
+	"github.com/runixo/agent/internal/security"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

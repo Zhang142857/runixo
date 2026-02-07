@@ -9,4 +9,4 @@ export type { ValidationResult } from './utils'
 export { Tool, Command, OnEvent, RequirePermission } from './decorators'
 
 // 类型重导出
-export * from '@serverhub/plugin-types'
+export * from 'runixo-plugin-types'

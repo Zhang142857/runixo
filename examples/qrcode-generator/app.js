@@ -127,7 +127,7 @@ app.get('/', (req, res) => {
       <a id="downloadLink" class="download-btn" download="qrcode.png">下载二维码</a>
     </div>
     <div class="footer">
-      Powered by ServerHub
+      Powered by Runixo
     </div>
   </div>
   <script>

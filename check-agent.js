@@ -15,7 +15,7 @@ async function main() {
   })
 
   const proto = grpc.loadPackageDefinition(packageDefinition)
-  const client = new proto.serverhub.AgentService(
+  const client = new proto.runixo.AgentService(
     '3.143.142.246:9527',
     grpc.credentials.createInsecure()
   )
@@ -26,7 +26,7 @@ async function main() {
   // 检查文件大小和 MD5
   client.ExecuteCommand({
     command: 'bash',
-    args: ['-c', 'ls -la /usr/local/bin/serverhub-agent && md5sum /usr/local/bin/serverhub-agent'],
+    args: ['-c', 'ls -la /usr/local/bin/runixo-agent && md5sum /usr/local/bin/runixo-agent'],
     timeout_seconds: 10
   }, metadata, (err, res) => {
     console.log('Server binary info:')
@@ -35,7 +35,7 @@ async function main() {
     // 检查运行中的进程
     client.ExecuteCommand({
       command: 'bash',
-      args: ['-c', 'ps aux | grep serverhub-agent | grep -v grep'],
+      args: ['-c', 'ps aux | grep runixo-agent | grep -v grep'],
       timeout_seconds: 5
     }, metadata, (err2, res2) => {
       console.log('\nRunning process:')
@@ -53,7 +53,7 @@ async function main() {
         // 检查版本
         client.ExecuteCommand({
           command: 'bash',
-          args: ['-c', '/usr/local/bin/serverhub-agent --version'],
+          args: ['-c', '/usr/local/bin/runixo-agent --version'],
           timeout_seconds: 5
         }, metadata, (err4, res4) => {
           console.log('\nBinary version:')

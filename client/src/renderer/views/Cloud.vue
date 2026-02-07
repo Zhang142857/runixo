@@ -326,7 +326,7 @@ function checkPluginConnected(pluginId: string): boolean {
 }
 
 function checkLegacyConnected(providerId: string): boolean {
-  const saved = localStorage.getItem('serverhub_cloud_providers')
+  const saved = localStorage.getItem('runixo_cloud_providers')
   if (saved) {
     try {
       const configs = JSON.parse(saved)
@@ -420,7 +420,7 @@ function saveConfig() {
   }
 
   // 保存配置
-  const saved = localStorage.getItem('serverhub_cloud_providers')
+  const saved = localStorage.getItem('runixo_cloud_providers')
   let configs: Record<string, Record<string, string>> = {}
   if (saved) {
     try {
@@ -428,7 +428,7 @@ function saveConfig() {
     } catch { /* ignore */ }
   }
   configs[currentProvider.value.id] = { ...configForm.value }
-  localStorage.setItem('serverhub_cloud_providers', JSON.stringify(configs))
+  localStorage.setItem('runixo_cloud_providers', JSON.stringify(configs))
 
   showConfigDialog.value = false
   ElMessage.success(`${currentProvider.value.name} 已连接`)

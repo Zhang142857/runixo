@@ -112,6 +112,54 @@ export function setupIpcHandlers() {
     return await client.executeCommand(command, args, options)
   })
 
+  // 流式命令执行 - 实时输出
+  ipcMain.handle('server:executeCommandStream', async (event, serverId: string, cmd: string, streamId: string) => {
+    const client = serverConnections.get(serverId)
+    if (!client) throw new Error('Server not connected')
+
+    return new Promise<{ exit_code: number }>((resolve) => {
+      const shell = client.createShell(24, 200)
+      const marker = `__DONE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`
+      let resolved = false
+
+      shell.on('data', (chunk: any) => {
+        if (resolved) return
+        const text = chunk.data ? Buffer.from(chunk.data).toString('utf-8') : ''
+        if (!text) return
+
+        const markerIdx = text.indexOf(marker)
+        if (markerIdx !== -1) {
+          resolved = true
+          const codeMatch = text.substring(markerIdx).match(/:(\d+)/)
+          const exitCode = codeMatch ? parseInt(codeMatch[1]) : 0
+          shell.end()
+          resolve({ exit_code: exitCode })
+          return
+        }
+
+        event.sender.send(`cmd:output:${streamId}`, text)
+      })
+
+      shell.on('error', () => { if (!resolved) { resolved = true; resolve({ exit_code: 1 }) } })
+      shell.on('end', () => { if (!resolved) { resolved = true; resolve({ exit_code: 0 }) } })
+
+      shell.write({ data: Buffer.from(`${cmd}\necho '${marker}:'$?\n`) })
+    })
+  })
+
+  // ==================== Agent 更新 ====================
+  ipcMain.handle('server:checkUpdate', async (_, serverId: string) => {
+    const client = serverConnections.get(serverId)
+    if (!client) throw new Error('Server not connected')
+    return await client.checkUpdate()
+  })
+
+  ipcMain.handle('server:applyUpdate', async (_, serverId: string, version: string) => {
+    const client = serverConnections.get(serverId)
+    if (!client) throw new Error('Server not connected')
+    return await client.applyUpdate(version)
+  })
+
   // ==================== 容器管理（通过命令执行） ====================
   ipcMain.handle('container:list', async (_, serverId: string, all?: boolean) => {
     const client = serverConnections.get(serverId)

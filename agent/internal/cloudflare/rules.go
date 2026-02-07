@@ -70,7 +70,7 @@ type RuleManager struct {
 // NewRuleManager 创建规则管理器
 func NewRuleManager(dataPath string) *RuleManager {
 	if dataPath == "" {
-		dataPath = "/var/lib/serverhub/cloudflare"
+		dataPath = "/var/lib/runixo/cloudflare"
 	}
 
 	rm := &RuleManager{
@@ -460,7 +460,7 @@ func (rm *RuleManager) compareString(value, operator, target string) bool {
 // compareNumeric 数值比较
 func (rm *RuleManager) compareNumeric(value int, operator, target string) bool {
 	var targetInt int
-	if _, err := json.Unmarshal([]byte(target), &targetInt); err != nil {
+	if err := json.Unmarshal([]byte(target), &targetInt); err != nil {
 		return false
 	}
 

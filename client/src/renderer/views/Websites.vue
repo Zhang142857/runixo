@@ -1037,7 +1037,7 @@ onMounted(() => {
 })
 
 function loadProjectsFromStorage() {
-  const saved = localStorage.getItem('serverhub_projects')
+  const saved = localStorage.getItem('runixo_projects')
   if (saved) { try { projects.value = JSON.parse(saved) } catch { projects.value = [] } }
 }
 
@@ -1073,7 +1073,7 @@ async function checkEnvironment() {
 }
 
 function saveProjectsToStorage() {
-  localStorage.setItem('serverhub_projects', JSON.stringify(projects.value))
+  localStorage.setItem('runixo_projects', JSON.stringify(projects.value))
 }
 
 async function loadData() { await loadSites() }
@@ -1561,7 +1561,7 @@ function needsPortForType(type: string): boolean {
 }
 
 async function startWithSystemd(project: Project) {
-  const serviceName = `serverhub-${project.name}`
+  const serviceName = `runixo-${project.name}`
   // 自动添加 PORT 环境变量
   const envVars = [...project.envVars]
   if (project.port && !envVars.some(e => e.key === 'PORT')) {
@@ -1642,7 +1642,7 @@ async function startProject(project: Project) {
   try {
     const pm = project.processManager || 'systemd'
     if (pm === 'pm2') await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `pm2 start ${project.name}`])
-    else await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `sudo systemctl start serverhub-${project.name}`])
+    else await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `sudo systemctl start runixo-${project.name}`])
     project.status = 'running'
     saveProjectsToStorage()
     ElMessage.success('已启动')
@@ -1654,7 +1654,7 @@ async function stopProject(project: Project) {
   try {
     const pm = project.processManager || 'systemd'
     if (pm === 'pm2') await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `pm2 stop ${project.name}`])
-    else await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `sudo systemctl stop serverhub-${project.name}`])
+    else await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `sudo systemctl stop runixo-${project.name}`])
     project.status = 'stopped'
     saveProjectsToStorage()
     ElMessage.success('已停止')
@@ -1675,7 +1675,7 @@ async function loadProjectLogs(project: Project) {
     const pm = project.processManager || 'systemd'
     const cmd = pm === 'pm2' 
       ? `pm2 logs ${project.name} --lines 100 --nostream 2>/dev/null || echo "无日志"`
-      : `sudo journalctl -u serverhub-${project.name} -n 100 --no-pager 2>/dev/null || echo "无日志"`
+      : `sudo journalctl -u runixo-${project.name} -n 100 --no-pager 2>/dev/null || echo "无日志"`
     const result = await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', cmd])
     deployLog.value = result.stdout || '无日志'
   } catch { deployLog.value = '获取失败' }
@@ -1811,7 +1811,7 @@ async function deleteProject() {
     const pm = currentProject.value.processManager || 'systemd'
     const name = currentProject.value.name
     if (pm === 'pm2') await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `pm2 delete ${name} 2>/dev/null || true; pm2 save`])
-    else await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `sudo systemctl stop serverhub-${name} || true; sudo systemctl disable serverhub-${name} || true; sudo rm -f /etc/systemd/system/serverhub-${name}.service`])
+    else await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `sudo systemctl stop runixo-${name} || true; sudo systemctl disable runixo-${name} || true; sudo rm -f /etc/systemd/system/runixo-${name}.service`])
     await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', `sudo rm -f /etc/nginx/sites-enabled/${name} /etc/nginx/sites-available/${name}`])
     await window.electronAPI.server.executeCommand(selectedServer.value, 'bash', ['-c', 'sudo systemctl reload nginx'])
     projects.value = projects.value.filter(p => p.id !== currentProject.value!.id)

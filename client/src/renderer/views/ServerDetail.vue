@@ -12,6 +12,9 @@
         <span class="uptime-badge" v-if="systemInfo.uptime">运行 {{ formatUptime(systemInfo.uptime) }}</span>
       </div>
       <div class="header-actions">
+        <el-button @click="checkAgentUpdate" :loading="updateChecking" size="small">
+          <el-icon><Upload /></el-icon>检查更新
+        </el-button>
         <el-button @click="refreshData" :loading="refreshing"><el-icon><Refresh /></el-icon>刷新</el-button>
         <el-button @click="openTerminal">终端</el-button>
         <el-button @click="openFiles">文件管理</el-button>
@@ -182,8 +185,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useServerStore } from '@/stores/server'
-import { ElMessage } from 'element-plus'
-import { ArrowLeft, Refresh, Loading } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft, Refresh, Loading, Upload } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -210,6 +213,7 @@ const filteredDisks = computed(() => {
 
 const loading = ref(true)
 const refreshing = ref(false)
+const updateChecking = ref(false)
 const commandOutput = ref('')
 const systemInfo = ref<any>({})
 const metrics = ref({
@@ -300,6 +304,27 @@ async function refreshData() {
   } finally {
     refreshing.value = false
   }
+}
+
+async function checkAgentUpdate() {
+  if (!server.value) return
+  updateChecking.value = true
+  try {
+    const info = await window.electronAPI.server.checkUpdate(server.value.id)
+    if (info.available) {
+      await ElMessageBox.confirm(
+        `发现新版本 ${info.latest_version}（当前 ${info.current_version}）\n${info.release_notes || ''}`,
+        'Agent 更新', { confirmButtonText: '立即更新', cancelButtonText: '稍后' }
+      )
+      const res = await window.electronAPI.server.applyUpdate(server.value.id, info.latest_version)
+      if (res.success) ElMessage.success('更新已应用，Agent 即将重启')
+      else ElMessage.error(res.error || '更新失败')
+    } else {
+      ElMessage.info(`当前已是最新版本 (${info.current_version})`)
+    }
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.toString() !== 'cancel') ElMessage.error('检查更新失败: ' + (e as Error).message)
+  } finally { updateChecking.value = false }
 }
 
 function openTerminal() {

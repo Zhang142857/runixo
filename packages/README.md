@@ -1,6 +1,6 @@
-# ServerHub Plugin SDK
+# Runixo Plugin SDK
 
-完整的插件开发工具包，用于构建 ServerHub 插件。
+完整的插件开发工具包，用于构建 Runixo 插件。
 
 ## 📦 包结构
 
@@ -16,13 +16,13 @@ packages/
 ### 安装 CLI 工具
 
 ```bash
-npm install -g @serverhub/plugin-cli
+npm install -g runixo-plugin-cli
 ```
 
 ### 创建新插件
 
 ```bash
-serverhub-plugin create my-plugin
+runixo-plugin create my-plugin
 ```
 
 选择模板：
@@ -67,7 +67,7 @@ my-plugin/
 所有插件都应该继承 `Plugin` 基类：
 
 ```typescript
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class MyPlugin extends Plugin {
   constructor(context: PluginContext) {
@@ -335,7 +335,7 @@ const result = await window.electronAPI.plugin.call(
 创建新插件：
 
 ```bash
-serverhub-plugin create [name] [options]
+runixo-plugin create [name] [options]
 
 Options:
   -t, --template <template>  插件模板 (basic, cloud-service, monitoring)
@@ -346,7 +346,7 @@ Options:
 启动开发服务器：
 
 ```bash
-serverhub-plugin dev [options]
+runixo-plugin dev [options]
 
 Options:
   -p, --port <port>  开发服务器端口 (默认: 3000)
@@ -357,7 +357,7 @@ Options:
 构建插件：
 
 ```bash
-serverhub-plugin build [options]
+runixo-plugin build [options]
 
 Options:
   -w, --watch  监听模式
@@ -368,7 +368,7 @@ Options:
 ### 基础插件示例
 
 ```typescript
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class HelloPlugin extends Plugin {
   async onLoad() {
@@ -397,7 +397,7 @@ export default class HelloPlugin extends Plugin {
 ### 云服务插件示例
 
 ```typescript
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class CloudPlugin extends Plugin {
   private apiToken: string | null = null

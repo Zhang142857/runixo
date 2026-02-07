@@ -313,7 +313,7 @@ func (c *Client) DeleteAccessRule(zoneID, ruleID string) error {
 // BlockIP 封禁 IP
 func (c *Client) BlockIP(zoneID, ip, reason string) (*AccessRule, error) {
 	if reason == "" {
-		reason = fmt.Sprintf("Blocked by ServerHub at %s", time.Now().Format(time.RFC3339))
+		reason = fmt.Sprintf("Blocked by Runixo at %s", time.Now().Format(time.RFC3339))
 	}
 	return c.CreateAccessRule(zoneID, "block", ip, reason)
 }
@@ -326,7 +326,7 @@ func (c *Client) UnblockIP(zoneID, ruleID string) error {
 // ChallengeIP 对 IP 发起验证挑战
 func (c *Client) ChallengeIP(zoneID, ip, reason string) (*AccessRule, error) {
 	if reason == "" {
-		reason = fmt.Sprintf("Challenged by ServerHub at %s", time.Now().Format(time.RFC3339))
+		reason = fmt.Sprintf("Challenged by Runixo at %s", time.Now().Format(time.RFC3339))
 	}
 	return c.CreateAccessRule(zoneID, "challenge", ip, reason)
 }
@@ -334,7 +334,7 @@ func (c *Client) ChallengeIP(zoneID, ip, reason string) (*AccessRule, error) {
 // WhitelistIP 将 IP 加入白名单
 func (c *Client) WhitelistIP(zoneID, ip, reason string) (*AccessRule, error) {
 	if reason == "" {
-		reason = fmt.Sprintf("Whitelisted by ServerHub at %s", time.Now().Format(time.RFC3339))
+		reason = fmt.Sprintf("Whitelisted by Runixo at %s", time.Now().Format(time.RFC3339))
 	}
 	return c.CreateAccessRule(zoneID, "whitelist", ip, reason)
 }

@@ -3,7 +3,7 @@ const protoLoader = require('./client/node_modules/@grpc/proto-loader');
 
 const TOKEN = 'fcb75bf947ca1f3808ba5fb09d04033eb53e03187e2f81d776e362fcd343232a';
 const packageDef = protoLoader.loadSync('./proto/agent.proto');
-const proto = grpc.loadPackageDefinition(packageDef).serverhub;
+const proto = grpc.loadPackageDefinition(packageDef).runixo;
 const client = new proto.AgentService('3.143.142.246:9527', grpc.credentials.createInsecure());
 
 const metadata = new grpc.Metadata();
@@ -21,7 +21,7 @@ const commands = [
   // 直接测试本地访问
   'curl -s http://127.0.0.1:3010 2>&1 | head -20 || echo "本地无法访问"',
   // 检查 systemd 服务
-  'systemctl status serverhub-TEST-APP2 --no-pager 2>&1 || echo "systemd服务不存在"'
+  'systemctl status runixo-TEST-APP2 --no-pager 2>&1 || echo "systemd服务不存在"'
 ];
 
 async function run() {

@@ -1,4 +1,4 @@
-# ServerHub 实施进度报告
+# Runixo 实施进度报告
 
 **日期**: 2026-02-06  
 **状态**: 进行中
@@ -9,18 +9,18 @@
 
 ### 1. 插件SDK系统 (100%)
 
-#### 1.1 插件类型定义包 (@serverhub/plugin-types)
+#### 1.1 插件类型定义包 (runixo-plugin-types)
 - ✅ 完整的TypeScript类型定义
 - ✅ PluginContext接口
 - ✅ 所有API类型定义
 
-#### 1.2 插件SDK核心包 (@serverhub/plugin-sdk)
+#### 1.2 插件SDK核心包 (runixo-plugin-sdk)
 - ✅ Plugin基类实现
 - ✅ 生命周期钩子
 - ✅ 工具注册方法
 - ✅ Agent集成
 
-#### 1.3 插件CLI工具 (@serverhub/plugin-cli)
+#### 1.3 插件CLI工具 (runixo-plugin-cli)
 - ✅ create命令
 - ✅ build命令
 - ✅ dev命令

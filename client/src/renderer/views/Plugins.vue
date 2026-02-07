@@ -1,11 +1,21 @@
 <template>
-  <div class="plugins-page">
+  <div class="plugins-page" @dragover.prevent="onDragOver" @dragleave="onDragLeave" @drop.prevent="onDrop">
+    <!-- 拖拽安装遮罩 -->
+    <div v-if="isDragging" class="drop-overlay">
+      <div class="drop-hint">
+        <el-icon :size="48"><Upload /></el-icon>
+        <p>拖放 .shplugin 文件到此处安装</p>
+      </div>
+    </div>
     <div class="page-header animate-fade-in">
       <div class="header-left">
         <h1>插件市场</h1>
-        <p class="subtitle">扩展 ServerHub 的功能</p>
+        <p class="subtitle">扩展 Runixo 的功能</p>
       </div>
       <div class="header-right">
+        <el-button @click="triggerFileInstall" type="success" plain>
+          <el-icon><Upload /></el-icon>安装本地插件
+        </el-button>
         <el-input
           v-model="searchQuery"
           placeholder="搜索插件..."
@@ -408,7 +418,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Setting, Refresh } from '@element-plus/icons-vue'
+import { Search, Setting, Refresh, Upload } from '@element-plus/icons-vue'
 import { usePluginStore, type PluginInfo, type MarketPlugin } from '@/stores/plugin'
 import TechIcon from '@/components/icons/TechIcons.vue'
 
@@ -421,7 +431,7 @@ const defaultPlugins: MarketPlugin[] = [
     name: 'Cloudflare 安全防护',
     version: '1.0.0',
     description: '集成 Cloudflare 安全功能，自动封禁恶意 IP，防 DDoS 攻击',
-    author: 'ServerHub',
+    author: 'Runixo',
     icon: 'cloudflare',
     iconBg: '#F38020',
     downloads: 5200,
@@ -430,7 +440,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['安全', 'Cloudflare', '防火墙', 'DDoS'],
     category: 'security',
     official: true,
-    downloadUrl: 'https://plugins.serverhub.dev/cloudflare-security',
+    downloadUrl: 'https://plugins.runixo.dev/cloudflare-security',
     updatedAt: '2024-01-20',
     features: ['自动封禁恶意IP', 'WAF规则管理', 'DDoS防护', '安全仪表板']
   },
@@ -439,7 +449,7 @@ const defaultPlugins: MarketPlugin[] = [
     name: 'Nginx 管理',
     version: '1.0.0',
     description: '可视化管理 Nginx 配置、虚拟主机和 SSL 证书',
-    author: 'ServerHub',
+    author: 'Runixo',
     icon: 'nginx',
     iconBg: '#009639',
     downloads: 6200,
@@ -448,7 +458,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['Web服务器', 'Nginx', '反向代理'],
     category: 'web',
     official: true,
-    downloadUrl: 'https://plugins.serverhub.dev/nginx-manager',
+    downloadUrl: 'https://plugins.runixo.dev/nginx-manager',
     updatedAt: '2024-01-15',
     features: ['虚拟主机管理', 'SSL证书配置', '反向代理设置', '负载均衡']
   },
@@ -457,7 +467,7 @@ const defaultPlugins: MarketPlugin[] = [
     name: 'MySQL 管理',
     version: '1.0.0',
     description: '数据库管理、备份恢复、性能监控',
-    author: 'ServerHub',
+    author: 'Runixo',
     icon: 'mysql',
     iconBg: '#4479A1',
     downloads: 5100,
@@ -466,7 +476,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['数据库', 'MySQL', 'SQL'],
     category: 'database',
     official: true,
-    downloadUrl: 'https://plugins.serverhub.dev/mysql-manager',
+    downloadUrl: 'https://plugins.runixo.dev/mysql-manager',
     updatedAt: '2024-01-10',
     features: ['数据库管理', '用户权限', '备份恢复', '性能监控']
   },
@@ -475,7 +485,7 @@ const defaultPlugins: MarketPlugin[] = [
     name: 'Redis 管理',
     version: '1.0.0',
     description: 'Redis 数据库可视化管理，支持键值浏览、监控',
-    author: 'ServerHub',
+    author: 'Runixo',
     icon: 'redis',
     iconBg: '#DC382D',
     downloads: 4300,
@@ -484,7 +494,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['数据库', 'Redis', '缓存'],
     category: 'database',
     official: true,
-    downloadUrl: 'https://plugins.serverhub.dev/redis-manager',
+    downloadUrl: 'https://plugins.runixo.dev/redis-manager',
     updatedAt: '2024-01-08',
     features: ['键值浏览', '数据编辑', '性能监控', '内存分析']
   },
@@ -493,7 +503,7 @@ const defaultPlugins: MarketPlugin[] = [
     name: '自动备份',
     version: '1.0.0',
     description: '定时备份文件和数据库到本地或云存储',
-    author: 'ServerHub',
+    author: 'Runixo',
     icon: 'backup',
     iconBg: '#1989FA',
     downloads: 4200,
@@ -502,7 +512,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['备份', '定时任务', '云存储'],
     category: 'tools',
     official: true,
-    downloadUrl: 'https://plugins.serverhub.dev/backup-manager',
+    downloadUrl: 'https://plugins.runixo.dev/backup-manager',
     updatedAt: '2024-01-05',
     features: ['定时备份', '增量备份', '云存储支持', '备份恢复']
   },
@@ -511,7 +521,7 @@ const defaultPlugins: MarketPlugin[] = [
     name: '高级监控',
     version: '1.0.0',
     description: '详细的性能监控、告警通知、历史数据',
-    author: 'ServerHub',
+    author: 'Runixo',
     icon: 'monitor',
     iconBg: '#6366f1',
     downloads: 5600,
@@ -520,7 +530,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['监控', '告警', '性能'],
     category: 'monitor',
     official: true,
-    downloadUrl: 'https://plugins.serverhub.dev/advanced-monitor',
+    downloadUrl: 'https://plugins.runixo.dev/advanced-monitor',
     updatedAt: '2024-01-03',
     features: ['实时监控', '历史数据', '告警规则', '邮件通知']
   },
@@ -538,7 +548,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['游戏', 'Minecraft', '服务器'],
     category: 'game',
     official: false,
-    downloadUrl: 'https://plugins.serverhub.dev/minecraft-server',
+    downloadUrl: 'https://plugins.runixo.dev/minecraft-server',
     updatedAt: '2024-01-18',
     features: ['服务器控制', '玩家管理', '插件管理', '世界备份']
   },
@@ -547,7 +557,7 @@ const defaultPlugins: MarketPlugin[] = [
     name: '防火墙管理',
     version: '1.0.0',
     description: '可视化管理 iptables/firewalld 规则',
-    author: 'ServerHub',
+    author: 'Runixo',
     icon: 'firewall',
     iconBg: '#1989FA',
     downloads: 3200,
@@ -556,7 +566,7 @@ const defaultPlugins: MarketPlugin[] = [
     tags: ['安全', '防火墙', '网络'],
     category: 'security',
     official: true,
-    downloadUrl: 'https://plugins.serverhub.dev/firewall-manager',
+    downloadUrl: 'https://plugins.runixo.dev/firewall-manager',
     updatedAt: '2024-01-02',
     features: ['规则管理', '端口控制', 'IP黑白名单', '日志分析']
   }
@@ -787,6 +797,43 @@ function submitReview() {
   userReview.value = ''
 }
 
+// 拖拽安装
+const isDragging = ref(false)
+
+function onDragOver(e: DragEvent) {
+  if (e.dataTransfer?.types.includes('Files')) isDragging.value = true
+}
+function onDragLeave() { isDragging.value = false }
+
+async function onDrop(e: DragEvent) {
+  isDragging.value = false
+  const file = e.dataTransfer?.files[0]
+  if (!file || !file.name.endsWith('.shplugin')) {
+    ElMessage.warning('请拖入 .shplugin 格式的插件文件')
+    return
+  }
+  await installFromFile(file.path)
+}
+
+async function triggerFileInstall() {
+  const filePath = await window.electronAPI.dialog.selectFile({
+    title: '选择插件文件',
+    filters: [{ name: 'Runixo Plugin', extensions: ['shplugin'] }]
+  })
+  if (filePath) await installFromFile(filePath)
+}
+
+async function installFromFile(filePath: string) {
+  try {
+    ElMessage.info('正在安装插件...')
+    await window.electronAPI.plugins.installFromFile(filePath)
+    ElMessage.success('插件安装成功！')
+    await pluginStore.initialize()
+  } catch (e) {
+    ElMessage.error(`安装失败: ${(e as Error).message}`)
+  }
+}
+
 onMounted(async () => {
   try {
     await pluginStore.initialize()
@@ -802,6 +849,15 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
+.drop-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;
+  background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center;
+  .drop-hint {
+    text-align: center; color: #fff; padding: 40px; border: 3px dashed var(--primary-color, #409eff); border-radius: 16px;
+    p { margin-top: 12px; font-size: 18px; }
+  }
+}
+
 // 动画关键帧
 @keyframes fadeIn {
   from { opacity: 0; }

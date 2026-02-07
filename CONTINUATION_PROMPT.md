@@ -1,4 +1,4 @@
-# ServerHub 开发继续提示
+# Runixo 开发继续提示
 
 **日期**: 2026-02-06  
 **当前状态**: 插件SDK和应用商店已完成，需要继续实施P0功能
@@ -13,9 +13,9 @@
 位置: `packages/`
 
 **已实现**:
-- ✅ `@serverhub/plugin-types` - 完整的TypeScript类型定义
-- ✅ `@serverhub/plugin-sdk` - Plugin基类、生命周期、API封装
-- ✅ `@serverhub/plugin-cli` - CLI工具（create/build/dev命令）
+- ✅ `runixo-plugin-types` - 完整的TypeScript类型定义
+- ✅ `runixo-plugin-sdk` - Plugin基类、生命周期、API封装
+- ✅ `runixo-plugin-cli` - CLI工具（create/build/dev命令）
 - ✅ 插件模板（基础插件、云服务插件）
 - ✅ 示例插件 `plugins/cloudflare-v2/`
 
@@ -189,7 +189,7 @@ client/src/
 ## 📂 项目结构
 
 ```
-serverhub/
+runixo/
 ├── packages/                    # 插件SDK包（已完成）
 │   ├── plugin-types/           # 类型定义
 │   ├── plugin-sdk/             # 核心SDK
@@ -550,7 +550,7 @@ pnpm add cron p-queue tar ali-oss
 
 ---
 
-**准备好了吗？让我们继续完成ServerHub v2.0的P0功能！** 🚀
+**准备好了吗？让我们继续完成Runixo v2.0的P0功能！** 🚀
 
 ---
 

@@ -546,7 +546,7 @@ const formatDuration = (ms: number): string => {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--text-secondary);
   margin: 5px 0 0 0;
 }
 
@@ -568,28 +568,28 @@ const formatDuration = (ms: number): string => {
 }
 
 .stat-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .stat-icon.total {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
 }
 
 .stat-icon.enabled {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
 }
 
 .stat-icon.success {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
 }
 
 .stat-info {
@@ -599,12 +599,12 @@ const formatDuration = (ms: number): string => {
 .stat-value {
   font-size: 28px;
   font-weight: bold;
-  color: #333;
+  color: var(--text-color);
 }
 
 .stat-label {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   margin-top: 5px;
 }
 
@@ -634,7 +634,7 @@ const formatDuration = (ms: number): string => {
 .cron-description {
   margin-top: 5px;
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .cron-builder {
@@ -643,7 +643,7 @@ const formatDuration = (ms: number): string => {
 
 .cron-preview {
   padding: 10px;
-  background: #f5f5f5;
+  background: var(--bg-tertiary);
   border-radius: 4px;
   margin: 15px 0;
 }

@@ -268,7 +268,7 @@ export class AppDeploymentEngine {
       const composeContent = this.replaceVariables(deployment.composeFile, options.config)
 
       // 生成Compose文件路径
-      const composeFilePath = `/tmp/serverhub_${instance.id}_compose.yml`
+      const composeFilePath = `/tmp/runixo_${instance.id}_compose.yml`
 
       const grpcClient = this.getGrpcClient(options.serverId)
       if (!grpcClient) {

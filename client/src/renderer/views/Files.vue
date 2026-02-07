@@ -1297,7 +1297,7 @@ function addToHistory(item: FileItem) {
 
 function saveHistory() {
   try {
-    localStorage.setItem('serverhub_file_history', JSON.stringify(recentHistory.value))
+    localStorage.setItem('runixo_file_history', JSON.stringify(recentHistory.value))
   } catch (e) {
     console.error('Failed to save history:', e)
   }
@@ -1305,7 +1305,7 @@ function saveHistory() {
 
 function loadHistory() {
   try {
-    const saved = localStorage.getItem('serverhub_file_history')
+    const saved = localStorage.getItem('runixo_file_history')
     if (saved) {
       recentHistory.value = JSON.parse(saved)
     }
@@ -1316,7 +1316,7 @@ function loadHistory() {
 
 function clearHistory() {
   recentHistory.value = []
-  localStorage.removeItem('serverhub_file_history')
+  localStorage.removeItem('runixo_file_history')
   ElMessage.success('历史记录已清空')
 }
 

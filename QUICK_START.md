@@ -1,6 +1,6 @@
-# ServerHub v2.0 快速开始指南
+# Runixo v2.0 快速开始指南
 
-欢迎使用ServerHub v2.0！本指南将帮助你快速上手新增的核心功能。
+欢迎使用Runixo v2.0！本指南将帮助你快速上手新增的核心功能。
 
 ---
 
@@ -307,7 +307,7 @@ Root密码: ********
 ## 🔌 插件开发
 
 ### 功能概述
-完整的插件SDK，支持快速开发ServerHub插件，扩展应用功能。
+完整的插件SDK，支持快速开发Runixo插件，扩展应用功能。
 
 ### 快速开始
 
@@ -323,10 +323,10 @@ npm link
 
 ```bash
 # 使用交互式向导
-serverhub-plugin create
+runixo-plugin create
 
 # 或指定模板
-serverhub-plugin create --template=cloud-service my-plugin
+runixo-plugin create --template=cloud-service my-plugin
 ```
 
 #### 3. 开发插件
@@ -356,7 +356,7 @@ my-plugin/
 
 ```typescript
 // src/main/index.ts
-import { Plugin, PluginContext } from '@serverhub/plugin-sdk'
+import { Plugin, PluginContext } from 'runixo-plugin-sdk'
 
 export default class MyPlugin extends Plugin {
   constructor(context: PluginContext) {
@@ -529,7 +529,7 @@ A: 帮助 → 检查更新
 
 ## 🎉 开始使用
 
-现在你已经了解了ServerHub v2.0的核心功能，开始使用吧！
+现在你已经了解了Runixo v2.0的核心功能，开始使用吧！
 
 1. ✅ 创建第一个备份策略
 2. ✅ 设置第一个计划任务

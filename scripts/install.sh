@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-# ServerHub Agent 一键安装脚本
+# Runixo Agent 一键安装脚本
 #
 # 使用方法:
-#   curl -fsSL https://cdn.jsdelivr.net/gh/Zhang142857/serverhub@main/scripts/install.sh | sudo bash
+#   curl -fsSL https://cdn.jsdelivr.net/gh/Zhang142857/runixo@main/scripts/install.sh | sudo bash
 #
 # 环境变量:
-#   SERVERHUB_VERSION  - 指定版本 (默认: latest)
-#   SERVERHUB_TOKEN    - 预设认证令牌
-#   SERVERHUB_PORT     - 监听端口 (默认: 9527)
+#   RUNIXO_VERSION  - 指定版本 (默认: latest)
+#   RUNIXO_TOKEN    - 预设认证令牌
+#   RUNIXO_PORT     - 监听端口 (默认: 9527)
 #
 
 set -e
@@ -23,15 +23,15 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # 配置
-GITHUB_REPO="Zhang142857/serverhub"
-BINARY_NAME="serverhub-agent"
-CONFIG_DIR="/etc/serverhub"
+GITHUB_REPO="Zhang142857/runixo"
+BINARY_NAME="runixo-agent"
+CONFIG_DIR="/etc/runixo"
 CONFIG_FILE="${CONFIG_DIR}/agent.yaml"
-SERVICE_FILE="/etc/systemd/system/serverhub-agent.service"
+SERVICE_FILE="/etc/systemd/system/runixo-agent.service"
 INSTALL_DIR="/usr/local/bin"
-CLI_NAME="serverhub"
-VERSION="${SERVERHUB_VERSION:-latest}"
-PORT="${SERVERHUB_PORT:-9527}"
+CLI_NAME="runixo"
+VERSION="${RUNIXO_VERSION:-latest}"
+PORT="${RUNIXO_PORT:-9527}"
 
 # 日志函数
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -217,13 +217,13 @@ get_latest_version() {
 download_binary() {
     local os=$1 arch=$2 version=$3
     
-    log_step "下载 ServerHub Agent..."
+    log_step "下载 Runixo Agent..."
     
     local tmp_dir=$(mktemp -d)
     trap "rm -rf ${tmp_dir}" EXIT
     
     # 直接从仓库下载编译好的二进制文件
-    local url="https://raw.githubusercontent.com/${GITHUB_REPO}/main/agent/serverhub-agent-linux"
+    local url="https://raw.githubusercontent.com/${GITHUB_REPO}/main/agent/runixo-agent-linux"
     
     echo ""
     echo -e "  ${CYAN}下载地址:${NC} ${url}"
@@ -259,8 +259,8 @@ download_binary() {
 
 # 生成令牌
 generate_token() {
-    if [ -n "${SERVERHUB_TOKEN}" ]; then
-        echo "${SERVERHUB_TOKEN}"
+    if [ -n "${RUNIXO_TOKEN}" ]; then
+        echo "${RUNIXO_TOKEN}"
     elif command -v openssl &>/dev/null; then
         openssl rand -hex 32
     else
@@ -298,7 +298,7 @@ EOF
 create_service() {
     cat > "${SERVICE_FILE}" << EOF
 [Unit]
-Description=ServerHub Agent
+Description=Runixo Agent
 After=network.target
 
 [Service]
@@ -317,16 +317,16 @@ EOF
 
 # 创建 CLI 管理工具
 create_cli_tool() {
-    log_step "安装 serverhub 管理命令..."
+    log_step "安装 runixo 管理命令..."
     
     cat > "${INSTALL_DIR}/${CLI_NAME}" << 'EOFCLI'
 #!/bin/bash
 #
-# ServerHub Agent 管理工具
+# Runixo Agent 管理工具
 #
 
-CONFIG_FILE="/etc/serverhub/agent.yaml"
-SERVICE_NAME="serverhub-agent"
+CONFIG_FILE="/etc/runixo/agent.yaml"
+SERVICE_NAME="runixo-agent"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -337,9 +337,9 @@ NC='\033[0m'
 
 show_help() {
     echo ""
-    echo -e "${BOLD}ServerHub Agent 管理工具${NC}"
+    echo -e "${BOLD}Runixo Agent 管理工具${NC}"
     echo ""
-    echo "用法: serverhub <命令> [参数]"
+    echo "用法: runixo <命令> [参数]"
     echo ""
     echo "命令:"
     echo "  status          查看服务状态"
@@ -427,7 +427,7 @@ cmd_info() {
     
     echo ""
     echo -e "${BOLD}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}              ServerHub 服务器连接信息                      ${NC}"
+    echo -e "${BOLD}              Runixo 服务器连接信息                      ${NC}"
     echo -e "${BOLD}═══════════════════════════════════════════════════════════${NC}"
     echo ""
     echo -e "  ${CYAN}公网地址:${NC}  ${BOLD}${public_ip}${NC}"
@@ -439,7 +439,7 @@ cmd_info() {
     echo ""
     echo -e "${BOLD}═══════════════════════════════════════════════════════════${NC}"
     echo ""
-    echo "在 ServerHub 客户端添加服务器时，使用以上信息连接"
+    echo "在 Runixo 客户端添加服务器时，使用以上信息连接"
     echo ""
 }
 
@@ -479,7 +479,7 @@ cmd_port() {
     local new_port=$1
     
     if [ -z "$new_port" ]; then
-        echo -e "${RED}请指定新端口: serverhub port <端口号>${NC}"
+        echo -e "${RED}请指定新端口: runixo port <端口号>${NC}"
         return 1
     fi
     
@@ -529,7 +529,7 @@ cmd_config() {
 
 cmd_uninstall() {
     echo ""
-    echo -e "${YELLOW}警告: 这将完全卸载 ServerHub Agent${NC}"
+    echo -e "${YELLOW}警告: 这将完全卸载 Runixo Agent${NC}"
     read -p "确定要卸载吗? [y/N] " -n 1 -r
     echo ""
     
@@ -543,21 +543,21 @@ cmd_uninstall() {
     systemctl disable $SERVICE_NAME 2>/dev/null || true
     
     echo "删除文件..."
-    rm -f /usr/local/bin/serverhub-agent
-    rm -f /usr/local/bin/serverhub
-    rm -f /etc/systemd/system/serverhub-agent.service
-    rm -rf /etc/serverhub
+    rm -f /usr/local/bin/runixo-agent
+    rm -f /usr/local/bin/runixo
+    rm -f /etc/systemd/system/runixo-agent.service
+    rm -rf /etc/runixo
     
     systemctl daemon-reload
     
     echo ""
-    echo -e "${GREEN}ServerHub Agent 已卸载${NC}"
+    echo -e "${GREEN}Runixo Agent 已卸载${NC}"
 }
 
 # 检查 root
 if [ "$EUID" -ne 0 ]; then
     echo -e "${RED}请使用 root 用户运行此命令${NC}"
-    echo "尝试: sudo serverhub $*"
+    echo "尝试: sudo runixo $*"
     exit 1
 fi
 
@@ -584,7 +584,7 @@ esac
 EOFCLI
     
     chmod +x "${INSTALL_DIR}/${CLI_NAME}"
-    log_success "serverhub 命令已安装"
+    log_success "runixo 命令已安装"
 }
 
 # 启动服务
@@ -592,15 +592,15 @@ start_service() {
     log_step "启动服务..."
     
     log_info "设置开机自启..."
-    systemctl enable serverhub-agent >/dev/null 2>&1
+    systemctl enable runixo-agent >/dev/null 2>&1
     
-    log_info "启动 serverhub-agent..."
-    systemctl start serverhub-agent
+    log_info "启动 runixo-agent..."
+    systemctl start runixo-agent
     
     # 等待服务启动
     local count=0
     while [ $count -lt 5 ]; do
-        if systemctl is-active --quiet serverhub-agent; then
+        if systemctl is-active --quiet runixo-agent; then
             break
         fi
         sleep 1
@@ -608,11 +608,11 @@ start_service() {
         echo -e "  ${CYAN}>${NC} 等待服务启动... ($count/5)"
     done
     
-    if systemctl is-active --quiet serverhub-agent; then
+    if systemctl is-active --quiet runixo-agent; then
         log_success "服务已启动"
         
         # 显示监听端口
-        local listen_info=$(ss -tlnp 2>/dev/null | grep serverhub || netstat -tlnp 2>/dev/null | grep serverhub)
+        local listen_info=$(ss -tlnp 2>/dev/null | grep runixo || netstat -tlnp 2>/dev/null | grep runixo)
         if [ -n "$listen_info" ]; then
             log_info "监听端口:"
             echo "$listen_info" | while read line; do echo -e "  ${CYAN}>${NC} $line"; done
@@ -620,7 +620,7 @@ start_service() {
     else
         log_error "服务启动失败"
         log_info "查看错误日志:"
-        journalctl -u serverhub-agent -n 20 --no-pager 2>&1 | while read line; do echo -e "  ${RED}>${NC} $line"; done
+        journalctl -u runixo-agent -n 20 --no-pager 2>&1 | while read line; do echo -e "  ${RED}>${NC} $line"; done
         exit 1
     fi
 }
@@ -633,7 +633,7 @@ show_connection_info() {
     
     echo ""
     echo -e "${BOLD}╔═══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}║           ${GREEN}ServerHub Agent 安装成功!${NC}${BOLD}                          ║${NC}"
+    echo -e "${BOLD}║           ${GREEN}Runixo Agent 安装成功!${NC}${BOLD}                          ║${NC}"
     echo -e "${BOLD}╠═══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${BOLD}║                      ${CYAN}服务器连接信息${NC}${BOLD}                           ║${NC}"
     echo -e "${BOLD}╠═══════════════════════════════════════════════════════════════╣${NC}"
@@ -649,25 +649,25 @@ show_connection_info() {
     echo -e "${BOLD}║${NC}  ${GREEN}${token}${NC}"
     printf "${BOLD}║${NC}%63s${BOLD}║${NC}\n" ""
     echo -e "${BOLD}╠═══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "${BOLD}║${NC}  在 ServerHub 客户端添加服务器时，使用以上信息              ${BOLD}║${NC}"
+    echo -e "${BOLD}║${NC}  在 Runixo 客户端添加服务器时，使用以上信息              ${BOLD}║${NC}"
     echo -e "${BOLD}╠═══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${BOLD}║                      ${YELLOW}管理命令${NC}${BOLD}                                 ║${NC}"
     echo -e "${BOLD}╠═══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "${BOLD}║${NC}  serverhub info        - 查看连接信息                        ${BOLD}║${NC}"
-    echo -e "${BOLD}║${NC}  serverhub status      - 查看服务状态                        ${BOLD}║${NC}"
-    echo -e "${BOLD}║${NC}  serverhub token:reset - 重置认证令牌                        ${BOLD}║${NC}"
-    echo -e "${BOLD}║${NC}  serverhub port <端口> - 修改监听端口                        ${BOLD}║${NC}"
-    echo -e "${BOLD}║${NC}  serverhub logs        - 查看日志                            ${BOLD}║${NC}"
-    echo -e "${BOLD}║${NC}  serverhub help        - 查看所有命令                        ${BOLD}║${NC}"
+    echo -e "${BOLD}║${NC}  runixo info        - 查看连接信息                        ${BOLD}║${NC}"
+    echo -e "${BOLD}║${NC}  runixo status      - 查看服务状态                        ${BOLD}║${NC}"
+    echo -e "${BOLD}║${NC}  runixo token:reset - 重置认证令牌                        ${BOLD}║${NC}"
+    echo -e "${BOLD}║${NC}  runixo port <端口> - 修改监听端口                        ${BOLD}║${NC}"
+    echo -e "${BOLD}║${NC}  runixo logs        - 查看日志                            ${BOLD}║${NC}"
+    echo -e "${BOLD}║${NC}  runixo help        - 查看所有命令                        ${BOLD}║${NC}"
     echo -e "${BOLD}╚═══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
 
 # 停止已有服务
 stop_existing() {
-    if systemctl is-active --quiet serverhub-agent 2>/dev/null; then
+    if systemctl is-active --quiet runixo-agent 2>/dev/null; then
         log_info "停止现有服务..."
-        systemctl stop serverhub-agent
+        systemctl stop runixo-agent
     fi
 }
 
@@ -675,7 +675,7 @@ stop_existing() {
 main() {
     echo ""
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}       ServerHub Agent 一键安装脚本${NC}"
+    echo -e "${BOLD}       Runixo Agent 一键安装脚本${NC}"
     echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
     echo ""
     

@@ -419,7 +419,7 @@ export const useAIStore = defineStore('ai', () => {
         createdAt: c.createdAt.toISOString(),
         updatedAt: c.updatedAt.toISOString()
       }))
-      localStorage.setItem('serverhub_ai_conversations', JSON.stringify(data))
+      localStorage.setItem('runixo_ai_conversations', JSON.stringify(data))
     } catch (e) {
       console.error('Failed to save conversations:', e)
     }
@@ -428,7 +428,7 @@ export const useAIStore = defineStore('ai', () => {
   // 从本地存储加载
   function loadFromStorage(): void {
     try {
-      const saved = localStorage.getItem('serverhub_ai_conversations')
+      const saved = localStorage.getItem('runixo_ai_conversations')
       if (saved) {
         const data = JSON.parse(saved)
         conversations.value = data.map((c: Record<string, unknown>) => ({
@@ -458,7 +458,7 @@ export const useAIStore = defineStore('ai', () => {
         ...r,
         timestamp: r.timestamp.toISOString()
       }))
-      localStorage.setItem('serverhub_ai_execution_history', JSON.stringify(data))
+      localStorage.setItem('runixo_ai_execution_history', JSON.stringify(data))
     } catch (e) {
       console.error('Failed to save execution history:', e)
     }
@@ -467,7 +467,7 @@ export const useAIStore = defineStore('ai', () => {
   // 加载执行历史
   function loadExecutionHistory(): void {
     try {
-      const saved = localStorage.getItem('serverhub_ai_execution_history')
+      const saved = localStorage.getItem('runixo_ai_execution_history')
       if (saved) {
         const data = JSON.parse(saved)
         executionHistory.value = data.map((r: Record<string, unknown>) => ({
@@ -483,7 +483,7 @@ export const useAIStore = defineStore('ai', () => {
   // 保存设置
   function saveSettings(): void {
     try {
-      localStorage.setItem('serverhub_ai_settings', JSON.stringify(settings.value))
+      localStorage.setItem('runixo_ai_settings', JSON.stringify(settings.value))
     } catch (e) {
       console.error('Failed to save settings:', e)
     }
@@ -492,7 +492,7 @@ export const useAIStore = defineStore('ai', () => {
   // 加载设置
   function loadSettings(): void {
     try {
-      const saved = localStorage.getItem('serverhub_ai_settings')
+      const saved = localStorage.getItem('runixo_ai_settings')
       if (saved) {
         settings.value = { ...settings.value, ...JSON.parse(saved) }
       }
