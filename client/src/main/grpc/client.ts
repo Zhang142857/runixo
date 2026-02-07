@@ -73,8 +73,6 @@ export class GrpcClient extends EventEmitter {
 
     let credentials: grpc.ChannelCredentials
     if (this.config.useTls) {
-      // 自签名证书：跳过 CA 验证，仍然加密传输
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
       credentials = grpc.credentials.createSsl()
     } else {
       credentials = grpc.credentials.createInsecure()
