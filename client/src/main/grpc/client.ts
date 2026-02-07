@@ -97,9 +97,11 @@ export class GrpcClient extends EventEmitter {
 
     let credentials: grpc.ChannelCredentials
     if (this.config.useTls) {
-      // 先通过 TLS 握手获取服务器自签名证书，再用它作为信任根
+      // TOFU: 先获取服务器自签名证书，再用它作为信任根
       const rootCert = await this.fetchServerCert()
-      credentials = grpc.credentials.createSsl(rootCert)
+      credentials = grpc.credentials.createSsl(rootCert, null, null, {
+        checkServerIdentity: () => undefined // 自签名证书跳过主机名验证
+      })
     } else {
       credentials = grpc.credentials.createInsecure()
     }

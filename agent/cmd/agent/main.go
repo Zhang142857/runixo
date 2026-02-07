@@ -289,15 +289,27 @@ func generateSelfSignedCert(certFile, keyFile string) error {
 
 	serialNumber, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 
+	// 收集本机所有 IP 地址
+	ips := []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
+	if addrs, err := net.InterfaceAddrs(); err == nil {
+		for _, a := range addrs {
+			if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				ips = append(ips, ipnet.IP)
+			}
+		}
+	}
+
 	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      pkix.Name{Organization: []string{"Runixo Agent"}, CommonName: "runixo-agent"},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(10 * 365 * 24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses:  []net.IP{net.ParseIP("0.0.0.0"), net.ParseIP("127.0.0.1")},
-		DNSNames:     []string{"localhost"},
+		SerialNumber:          serialNumber,
+		Subject:               pkix.Name{Organization: []string{"Runixo Agent"}, CommonName: "runixo-agent"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(10 * 365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		IPAddresses:           ips,
+		DNSNames:              []string{"localhost"},
 	}
 
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
