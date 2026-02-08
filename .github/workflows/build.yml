@@ -52,4 +52,4 @@ jobs:
       - name: Build (Vite only)
         run: |
           cd client
-          pnpm vite build
+          npx vite build
