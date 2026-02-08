@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "AI-Native Server Management Platform",
   "author": "Runixo Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zhang142857/runixo.git"
+  },
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "vite",
