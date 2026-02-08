@@ -4,7 +4,9 @@
  */
 
 import { EventEmitter } from 'events'
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain, net } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { LoadedPlugin, PluginPermission, pluginLoader } from './loader'
 import { pluginRuntime } from './runtime'
 
@@ -466,6 +468,21 @@ export function setupPluginIPC(): void {
   ipcMain.handle('plugin:install', async (_, pluginId: string, source?: string) => {
     // pluginLoader imported at top level
     return await pluginLoader.installPlugin(source || 'official', pluginId)
+  })
+
+  ipcMain.handle('plugin:installFromUrl', async (_, url: string) => {
+    const os = require('os')
+    const tmpPath = path.join(os.tmpdir(), `runixo-plugin-${Date.now()}.shplugin`)
+    try {
+      const resp = await net.fetch(url)
+      if (!resp.ok) throw new Error(`Download failed: ${resp.status}`)
+      const buffer = Buffer.from(await resp.arrayBuffer())
+      fs.writeFileSync(tmpPath, buffer)
+      const plugin = await pluginLoader.installFromFile(tmpPath)
+      return { success: true, pluginId: plugin.manifest.id }
+    } finally {
+      try { fs.unlinkSync(tmpPath) } catch {}
+    }
   })
 
   ipcMain.handle('plugin:installFromFile', async (_, filePath: string) => {

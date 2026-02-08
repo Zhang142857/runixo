@@ -725,8 +725,15 @@ function showPluginDetail(plugin: MarketPlugin) {
 async function installPlugin(plugin: MarketPlugin & { installing?: boolean }) {
   installingPlugins.value.add(plugin.id)
   try {
-    await pluginStore.installPlugin(plugin.id)
+    if (isOnlineMode.value) {
+      const serverUrl = getServerUrl()
+      const url = `${serverUrl}/api/v1/plugins/download?id=${plugin.id}`
+      await window.electronAPI.plugin.installFromUrl(url)
+    } else {
+      await pluginStore.installPlugin(plugin.id)
+    }
     ElMessage.success(`${plugin.name} 安装成功`)
+    await pluginStore.initialize()
   } catch (e) {
     ElMessage.error(`安装失败: ${(e as Error).message}`)
   } finally {

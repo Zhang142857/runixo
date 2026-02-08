@@ -458,6 +458,9 @@ const electronAPI: ElectronAPI = {
     installFromFile: (filePath: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('plugin:installFromFile', filePath),
 
+    installFromUrl: (url: string): Promise<{ success: boolean; pluginId?: string; error?: string }> =>
+      ipcRenderer.invoke('plugin:installFromUrl', url),
+
     uninstall: (pluginId: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('plugin:uninstall', pluginId),
 
