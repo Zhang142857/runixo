@@ -567,23 +567,15 @@ async function startSshInstall() {
         token: result.token, group: f.group, useTls: true
       })
       
-      // 保存证书
-      if (result.certificate) {
-        try {
-          await window.electronAPI.cert.save(id, result.certificate)
-          sshLogs.value.push({ text: '✓ 证书已保存', type: 'success' })
-        } catch (e: any) {
-          sshLogs.value.push({ text: `⚠ 证书保存失败: ${e.message}`, type: 'error' })
-        }
-      }
+      // 不保存 SSH 输出中的证书（可能有格式问题），让 TOFU 机制在连接时自动获取
       
       ElMessage.success('Agent 安装成功，服务器已添加')
-      // 自动连接
+      // 自动连接（TOFU 会通过 TLS 握手获取正确证书）
       try { 
         await serverStore.connectServer(id)
         sshLogs.value.push({ text: '✓ 已自动连接', type: 'success' })
-      } catch { 
-        sshLogs.value.push({ text: '⚠ 自动连接失败，请手动连接', type: 'error' })
+      } catch (e: any) { 
+        sshLogs.value.push({ text: `⚠ 自动连接失败，请手动连接\n${e.message}`, type: 'error' })
       }
     } else {
       sshLogs.value.push({ text: `\n❌ 安装失败: ${result.error}`, type: 'error' })

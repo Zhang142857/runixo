@@ -4,7 +4,7 @@ import * as tls from 'tls'
 import { join } from 'path'
 import { EventEmitter } from 'events'
 import { app } from 'electron'
-import { getCertificate, deleteCertificate } from '../cert-store'
+import { getCertificate, saveCertificate } from '../cert-store'
 import type {
   ServerConfig,
   ApiSystemInfo,
@@ -78,6 +78,8 @@ export class GrpcClient extends EventEmitter {
           if (cert && cert.raw) {
             const b64 = cert.raw.toString('base64')
             const pem = `-----BEGIN CERTIFICATE-----\n${b64.match(/.{1,64}/g)!.join('\n')}\n-----END CERTIFICATE-----\n`
+            // 保存证书到本地，下次连接直接使用
+            try { saveCertificate(this.config.id, pem) } catch {}
             resolve(Buffer.from(pem))
           } else {
             reject(new Error('无法获取服务器证书'))
@@ -122,30 +124,8 @@ export class GrpcClient extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.client.Authenticate(
         { token: this.config.token, client_version: '0.1.0' },
-        async (error: any, response: any) => {
+        (error: any, response: any) => {
           if (error) {
-            // 证书验证失败时，清除本地缓存的证书并用 TOFU 重试
-            if (this.config.useTls && error.message?.includes('certificate')) {
-              try {
-                deleteCertificate(this.config.id)
-                const freshCert = await this.fetchServerCert()
-                const freshCreds = grpc.credentials.createSsl(freshCert, null, null, {
-                  checkServerIdentity: () => undefined
-                })
-                this.client = new proto.runixo.AgentService(address, freshCreds)
-                this.updateClient = new proto.runixo.UpdateService(address, freshCreds)
-                this.client.Authenticate(
-                  { token: this.config.token, client_version: '0.1.0' },
-                  (err2: any, res2: any) => {
-                    if (err2) return reject(new Error(`Connection failed: ${err2.message}`))
-                    if (!res2.success) return reject(new Error(`Authentication failed: ${res2.message}`))
-                    this.connected = true
-                    resolve()
-                  }
-                )
-                return
-              } catch { /* fall through to original error */ }
-            }
             reject(new Error(`Connection failed: ${error.message}`))
           } else if (!response.success) {
             reject(new Error(`Authentication failed: ${response.message}`))
