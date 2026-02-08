@@ -4,7 +4,7 @@ import * as tls from 'tls'
 import { join } from 'path'
 import { EventEmitter } from 'events'
 import { app } from 'electron'
-import { getCertificate, saveCertificate } from '../cert-store'
+import { saveCertificate } from '../cert-store'
 import type {
   ServerConfig,
   ApiSystemInfo,
@@ -61,15 +61,8 @@ export class GrpcClient extends EventEmitter {
     this.metadata.set('authorization', `Bearer ${config.token}`)
   }
 
-  // 获取服务器证书：优先从本地存储读取，否则通过 TLS 握手获取
+  // 通过 TLS 握手直接从服务器获取证书
   private async fetchServerCert(): Promise<Buffer> {
-    // 尝试从本地证书存储读取
-    const localCert = getCertificate(this.config.id)
-    if (localCert) {
-      return Buffer.from(localCert)
-    }
-
-    // 本地没有证书，通过 TLS 握手获取（Trust On First Use）
     return new Promise((resolve, reject) => {
       const socket = tls.connect(
         { host: this.config.host, port: this.config.port, rejectUnauthorized: false },
@@ -78,7 +71,6 @@ export class GrpcClient extends EventEmitter {
           if (cert && cert.raw) {
             const b64 = cert.raw.toString('base64')
             const pem = `-----BEGIN CERTIFICATE-----\n${b64.match(/.{1,64}/g)!.join('\n')}\n-----END CERTIFICATE-----\n`
-            // 保存证书到本地，下次连接直接使用
             try { saveCertificate(this.config.id, pem) } catch {}
             resolve(Buffer.from(pem))
           } else {
