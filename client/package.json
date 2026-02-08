@@ -2,7 +2,10 @@
   "name": "runixo-client",
   "version": "0.1.0",
   "description": "AI-Native Server Management Platform",
-  "author": "Runixo Team",
+  "author": {
+    "name": "Runixo Team",
+    "email": "admin@runixo.top"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Zhang142857/runixo.git"
