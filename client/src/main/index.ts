@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, session } from 'electron'
+import { app, BrowserWindow, shell, session, ipcMain } from 'electron'
 import { join } from 'path'
 import { setupIpcHandlers } from './ipc/handlers'
 import { setupPluginIPC } from './plugins/api-bridge'
@@ -44,7 +44,7 @@ function createWindow() {
         'Content-Security-Policy': [
           isDev
             ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' data:; font-src 'self' data:"
-            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://runixo.top https://*.runixo.top https://hub.docker.com; img-src 'self' data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
+            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
         ]
       }
     })
@@ -81,6 +81,33 @@ app.whenReady().then(async () => {
   // 设置IPC处理器
   const serverConnections = setupIpcHandlers()
   setupPluginIPC()
+
+  // 外部请求 IPC 代理（渲染进程不直接 fetch 外部 URL）
+  ipcMain.handle('proxy:fetch', async (_, url: string, options?: { method?: string; headers?: Record<string, string>; body?: string }) => {
+    const https = require('https')
+    const http = require('http')
+    const { URL } = require('url')
+    const parsed = new URL(url)
+    const mod = parsed.protocol === 'https:' ? https : http
+    const reqOptions = {
+      method: options?.method || 'GET',
+      headers: options?.headers || {},
+    }
+    return new Promise((resolve) => {
+      const req = mod.request(url, reqOptions, (res: any) => {
+        const chunks: Buffer[] = []
+        res.on('data', (c: Buffer) => chunks.push(c))
+        res.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf-8')
+          resolve({ status: res.statusCode, headers: res.headers, body })
+        })
+        res.on('error', () => resolve({ status: 0, headers: {}, body: '' }))
+      })
+      req.on('error', () => resolve({ status: 0, headers: {}, body: '' }))
+      if (options?.body) req.write(options.body)
+      req.end()
+    })
+  })
   
   // 设置新功能的IPC处理器
   setupBackupHandlers(serverConnections)

@@ -362,6 +362,7 @@ export interface SaveDialogResult {
 export type SystemInfo = ApiSystemInfo
 
 export interface ElectronAPI {
+  fetch: (url: string, options?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ status: number; headers: Record<string, string>; body: string }>
   server: {
     connect: (config: ServerConfig) => Promise<ServerConnectResult>
     disconnect: (serverId: string) => Promise<{ success: boolean }>

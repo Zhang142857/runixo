@@ -900,9 +900,9 @@ onMounted(async () => {
   if (isOnlineMode.value) {
     try {
       const serverUrl = getServerUrl()
-      const resp = await fetch(`${serverUrl}/api/v1/plugins/list`)
-      if (resp.ok) {
-        const data = await resp.json()
+      const resp = await window.electronAPI.fetch(`${serverUrl}/api/v1/plugins/list`)
+      if (resp.status === 200) {
+        const data = JSON.parse(resp.body)
         if (data.plugins?.length > 0) {
           pluginStore.marketPlugins = data.plugins.map((p: any) => ({
             id: p.id,

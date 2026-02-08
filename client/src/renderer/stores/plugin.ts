@@ -174,9 +174,9 @@ export const usePluginStore = defineStore('plugin', () => {
       const saved = localStorage.getItem('runixo_settings')
       const settings = saved ? JSON.parse(saved) : {}
       if (settings.server?.onlineMode && settings.server?.url) {
-        const resp = await fetch(`${settings.server.url}/api/v1/plugins/list`)
-        if (resp.ok) {
-          const data = await resp.json()
+        const resp = await window.electronAPI.fetch(`${settings.server.url}/api/v1/plugins/list`)
+        if (resp.status === 200) {
+          const data = JSON.parse(resp.body)
           if (data.plugins?.length > 0) {
             marketPlugins.value = data.plugins.map((p: any) => ({
               id: p.id, name: p.name, version: p.version,

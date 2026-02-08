@@ -472,11 +472,18 @@ export function setupPluginIPC(): void {
 
   ipcMain.handle('plugin:installFromUrl', async (_, url: string) => {
     const os = require('os')
+    const https = require('https')
     const tmpPath = path.join(os.tmpdir(), `runixo-plugin-${Date.now()}.shplugin`)
     try {
-      const resp = await net.fetch(url)
-      if (!resp.ok) throw new Error(`Download failed: ${resp.status}`)
-      const buffer = Buffer.from(await resp.arrayBuffer())
+      const buffer: Buffer = await new Promise((resolve, reject) => {
+        https.get(url, (res: any) => {
+          if (res.statusCode !== 200) return reject(new Error(`Download failed: ${res.statusCode}`))
+          const chunks: Buffer[] = []
+          res.on('data', (c: Buffer) => chunks.push(c))
+          res.on('end', () => resolve(Buffer.concat(chunks)))
+          res.on('error', reject)
+        }).on('error', reject)
+      })
       fs.writeFileSync(tmpPath, buffer)
       const plugin = await pluginLoader.installFromFile(tmpPath)
       return { success: true, pluginId: plugin.manifest.id }

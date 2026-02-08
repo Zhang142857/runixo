@@ -1071,9 +1071,9 @@ async function searchForPull() {
   const _settings = JSON.parse(localStorage.getItem('runixo_settings') || '{}')
   if (_settings.server?.onlineMode && _settings.server?.url) {
     try {
-      const resp = await fetch(`${_settings.server.url}/api/v1/docker/search?q=${encodeURIComponent(pullSearchQuery.value)}&page_size=20`)
-      if (resp.ok) {
-        const data = await resp.json()
+      const resp = await window.electronAPI.fetch(`${_settings.server.url}/api/v1/docker/search?q=${encodeURIComponent(pullSearchQuery.value)}&page_size=20`)
+      if (resp.status === 200) {
+        const data = JSON.parse(resp.body)
         if (data.results?.length > 0) {
           pullSearchResults.value = data.results.map((r: any) => ({
             name: r.name, repo_name: r.name,
@@ -1436,8 +1436,8 @@ async function searchDockerHub() {
     if (_settings.server?.onlineMode && _settings.server?.url) {
       searchUrl = `${_settings.server.url}/api/v1/docker/search?q=${encodeURIComponent(hubSearch.value)}&page_size=20`
     }
-    const response = await fetch(searchUrl)
-    const data = await response.json()
+    const response = await window.electronAPI.fetch(searchUrl)
+    const data = JSON.parse(response.body)
     hubSearchResults.value = data.results || []
   } catch (e) {
     ElMessage.error('搜索失败，请检查网络连接')
@@ -1689,8 +1689,8 @@ async function loadHubTrending() {
   loadingTrending.value = true
   try {
     // 获取官方热门镜像
-    const response = await fetch('https://hub.docker.com/v2/repositories/library/?page_size=12&ordering=-pull_count')
-    const data = await response.json()
+    const response = await window.electronAPI.fetch('https://hub.docker.com/v2/repositories/library/?page_size=12&ordering=-pull_count')
+    const data = JSON.parse(response.body)
     hubTrending.value = data.results || []
   } catch (e) {
     console.error('Load trending error:', e)

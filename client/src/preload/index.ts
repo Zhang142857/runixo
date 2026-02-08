@@ -34,6 +34,10 @@ import type {
 
 // 暴露安全的 API 给渲染进程
 const electronAPI: ElectronAPI = {
+  // 外部请求代理
+  fetch: (url: string, options?: { method?: string; headers?: Record<string, string>; body?: string }): Promise<{ status: number; headers: Record<string, string>; body: string }> =>
+    ipcRenderer.invoke('proxy:fetch', url, options),
+
   // 服务器管理
   server: {
     connect: (config: ServerConfig): Promise<ServerConnectResult> =>
