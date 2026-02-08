@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -25,6 +26,7 @@ import (
 	"github.com/runixo/agent/internal/api"
 	"github.com/runixo/agent/internal/auth"
 	"github.com/runixo/agent/internal/plugin"
+	"github.com/runixo/agent/internal/ratelimit"
 	"github.com/runixo/agent/internal/server"
 	"github.com/runixo/agent/internal/updater"
 	"github.com/spf13/viper"
@@ -173,14 +175,16 @@ func run() error {
 	// gRPC 服务器选项
 	var opts []grpc.ServerOption
 
+	// TLS 证书路径（gRPC 和 REST API 共用）
+	var certFile, keyFile string
+
 	// TLS 配置
 	if viper.GetBool("server.tls.enabled") {
-		certFile := viper.GetString("server.tls.cert")
-		keyFile := viper.GetString("server.tls.key")
+		certFile = viper.GetString("server.tls.cert")
+		keyFile = viper.GetString("server.tls.key")
 
 		// 如果证书文件不存在，自动生成自签名证书
 		if certFile == "" || keyFile == "" {
-			dataDir := viper.GetString("data.dir")
 			certFile = filepath.Join(dataDir, "tls", "cert.pem")
 			keyFile = filepath.Join(dataDir, "tls", "key.pem")
 		}
@@ -206,14 +210,16 @@ func run() error {
 		log.Warn().Msg("⚠️  TLS 已禁用，gRPC 通信未加密，强烈建议启用 TLS")
 	}
 
-	// 添加认证拦截器
+	// 添加认证和速率限制拦截器
 	if token == "" {
 		log.Warn().Msg("未设置认证令牌，建议使用 --gen-token 生成")
 	}
 	authInterceptor := auth.NewAuthInterceptor(token)
+	rateLimiter := ratelimit.NewLimiter(nil) // 使用默认配置
+
 	opts = append(opts,
-		grpc.UnaryInterceptor(authInterceptor.Unary()),
-		grpc.StreamInterceptor(authInterceptor.Stream()),
+		grpc.ChainUnaryInterceptor(rateLimiter.UnaryInterceptor(), authInterceptor.Unary()),
+		grpc.ChainStreamInterceptor(rateLimiter.StreamInterceptor(), authInterceptor.Stream()),
 	)
 
 	// 创建 gRPC 服务器
@@ -236,8 +242,11 @@ func run() error {
 	mux := http.NewServeMux()
 	apiServer.RegisterRoutes(mux)
 	httpServer := &http.Server{
-		Addr:    apiAddr,
-		Handler: mux,
+		Addr:         apiAddr,
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	// 优雅关闭
@@ -262,9 +271,19 @@ func run() error {
 		Bool("auto_update", viper.GetBool("update.auto")).
 		Msg("Runixo Agent 已启动")
 
-	// 启动 REST API 服务器
+	// 启动 REST API 服务器（如果 TLS 启用则使用 HTTPS）
 	go func() {
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		var err error
+		if certFile != "" && keyFile != "" {
+			// REST API 也使用 TLS
+			httpServer.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+			log.Info().Str("addr", apiAddr).Msg("REST API 使用 HTTPS")
+			err = httpServer.ListenAndServeTLS(certFile, keyFile)
+		} else {
+			log.Warn().Msg("⚠️  REST API 使用 HTTP（未加密），建议启用 TLS")
+			err = httpServer.ListenAndServe()
+		}
+		if err != nil && err != http.ErrServerClosed {
 			log.Error().Err(err).Msg("REST API 服务错误")
 		}
 	}()
@@ -281,7 +300,7 @@ func run() error {
 
 // generateSelfSignedCert 生成自签名 TLS 证书
 func generateSelfSignedCert(certFile, keyFile string) error {
-	if err := os.MkdirAll(filepath.Dir(certFile), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(certFile), 0700); err != nil {
 		return err
 	}
 
@@ -307,10 +326,10 @@ func generateSelfSignedCert(certFile, keyFile string) error {
 		Subject:               pkix.Name{Organization: []string{"Runixo Agent"}, CommonName: "runixo-agent"},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(10 * 365 * 24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		IsCA:                  true,
+		IsCA:                  false, // 服务器证书不应是 CA
 		IPAddresses:           ips,
 		DNSNames:              []string{"localhost"},
 	}
@@ -320,7 +339,8 @@ func generateSelfSignedCert(certFile, keyFile string) error {
 		return err
 	}
 
-	certOut, err := os.Create(certFile)
+	// 证书文件权限 0644（公开可读）
+	certOut, err := os.OpenFile(certFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
@@ -331,6 +351,7 @@ func generateSelfSignedCert(certFile, keyFile string) error {
 	if err != nil {
 		return err
 	}
+	// 私钥文件权限 0600（仅 root 可读）
 	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err

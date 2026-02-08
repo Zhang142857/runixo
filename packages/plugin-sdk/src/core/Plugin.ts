@@ -8,7 +8,10 @@ import {
   CommandDefinition,
   AgentToolDefinition,
   AgentCallOptions,
-  AgentResponse
+  AgentResponse,
+  AgentDefinition,
+  WorkflowDefinition,
+  PromptTemplateDefinition
 } from 'runixo-plugin-types'
 
 /**
@@ -130,6 +133,27 @@ export abstract class Plugin {
   }
 
   /**
+   * 注册AI Agent
+   */
+  protected registerAgent(agent: AgentDefinition): void {
+    this.context.agent.registerAgent(agent)
+  }
+
+  /**
+   * 注册工作流
+   */
+  protected registerWorkflow(workflow: WorkflowDefinition): void {
+    this.context.agent.registerWorkflow(workflow)
+  }
+
+  /**
+   * 注册提示词模板
+   */
+  protected registerPromptTemplate(template: PromptTemplateDefinition): void {
+    this.context.agent.registerPromptTemplate(template)
+  }
+
+  /**
    * 调用Agent
    */
   protected async callAgent(
@@ -137,6 +161,26 @@ export abstract class Plugin {
     options?: AgentCallOptions
   ): Promise<AgentResponse> {
     return this.context.agent.chat(prompt, options) as any
+  }
+
+  /**
+   * 执行工作流
+   */
+  protected async executeWorkflow(
+    workflowId: string,
+    inputs: Record<string, any>
+  ): Promise<any> {
+    return this.context.agent.executeWorkflow(workflowId, inputs)
+  }
+
+  /**
+   * 渲染提示词模板
+   */
+  protected renderPrompt(
+    templateId: string,
+    variables: Record<string, any>
+  ): string {
+    return this.context.agent.renderPrompt(templateId, variables)
   }
 
   /**

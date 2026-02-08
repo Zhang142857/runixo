@@ -1,10 +1,12 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/runixo/agent/internal/collector"
@@ -12,17 +14,44 @@ import (
 
 // Server REST API 服务器
 type Server struct {
-	collector *collector.Collector
-	token     string
-	version   string
+	collector      *collector.Collector
+	token          string
+	version        string
+	failedAttempts map[string]*apiAttemptInfo
+	mu             sync.RWMutex
+}
+
+type apiAttemptInfo struct {
+	count       int
+	lockedUntil time.Time
+	lastAttempt time.Time
 }
 
 // NewServer 创建 API 服务器
 func NewServer(token, version string) *Server {
-	return &Server{
-		collector: collector.New(),
-		token:     token,
-		version:   version,
+	s := &Server{
+		collector:      collector.New(),
+		token:          token,
+		version:        version,
+		failedAttempts: make(map[string]*apiAttemptInfo),
+	}
+	go s.cleanupLoop()
+	return s
+}
+
+// cleanupLoop 定期清理过期的失败记录
+func (s *Server) cleanupLoop() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		s.mu.Lock()
+		now := time.Now()
+		for ip, info := range s.failedAttempts {
+			if now.After(info.lockedUntil) && now.Sub(info.lastAttempt) > 30*time.Minute {
+				delete(s.failedAttempts, ip)
+			}
+		}
+		s.mu.Unlock()
 	}
 }
 
@@ -33,39 +62,64 @@ type Response struct {
 	Error   string      `json:"error,omitempty"`
 }
 
-// authMiddleware 认证中间件
+func (s *Server) recordAPIFailedAttempt(ip string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.failedAttempts[ip]; !exists {
+		s.failedAttempts[ip] = &apiAttemptInfo{}
+	}
+	info := s.failedAttempts[ip]
+	info.count++
+	info.lastAttempt = time.Now()
+	if info.count >= 5 {
+		info.lockedUntil = time.Now().Add(15 * time.Minute)
+	}
+}
+
+// authMiddleware 认证中间件（常量时间比较 + 暴力破解防护）
 func (s *Server) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// 检查 Authorization header
+		ip := r.RemoteAddr
+
+		// 检查是否被锁定
+		s.mu.RLock()
+		info, exists := s.failedAttempts[ip]
+		s.mu.RUnlock()
+		if exists && time.Now().Before(info.lockedUntil) {
+			w.Header().Set("Retry-After", "900")
+			s.jsonError(w, "Too many failed attempts", http.StatusTooManyRequests)
+			return
+		}
+
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
+			s.recordAPIFailedAttempt(ip)
 			s.jsonError(w, "Missing authorization header", http.StatusUnauthorized)
 			return
 		}
 
-		// 支持 Bearer token 格式
 		token := strings.TrimPrefix(auth, "Bearer ")
-		if token != s.token {
+		// 常量时间比较防止时序攻击
+		if subtle.ConstantTimeCompare([]byte(token), []byte(s.token)) != 1 {
+			s.recordAPIFailedAttempt(ip)
 			s.jsonError(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
+
+		// 认证成功，清除失败记录
+		s.mu.Lock()
+		delete(s.failedAttempts, ip)
+		s.mu.Unlock()
 
 		next(w, r)
 	}
 }
 
-// corsMiddleware CORS 中间件
-func (s *Server) corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+// securityHeaders 安全响应头中间件（移除 CORS 通配符）
+func (s *Server) securityHeaders(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
 		next(w, r)
 	}
 }
@@ -85,14 +139,14 @@ func (s *Server) jsonError(w http.ResponseWriter, message string, code int) {
 
 // RegisterRoutes 注册路由
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
-	// 公开端点
-	mux.HandleFunc("/api/health", s.corsMiddleware(s.handleHealth))
-	mux.HandleFunc("/api/version", s.corsMiddleware(s.handleVersion))
+	// 公开端点（仅健康检查和版本）
+	mux.HandleFunc("/api/health", s.securityHeaders(s.handleHealth))
+	mux.HandleFunc("/api/version", s.securityHeaders(s.handleVersion))
 
 	// 需要认证的端点
-	mux.HandleFunc("/api/system", s.corsMiddleware(s.authMiddleware(s.handleSystemInfo)))
-	mux.HandleFunc("/api/metrics", s.corsMiddleware(s.authMiddleware(s.handleMetrics)))
-	mux.HandleFunc("/api/processes", s.corsMiddleware(s.authMiddleware(s.handleProcesses)))
+	mux.HandleFunc("/api/system", s.securityHeaders(s.authMiddleware(s.handleSystemInfo)))
+	mux.HandleFunc("/api/metrics", s.securityHeaders(s.authMiddleware(s.handleMetrics)))
+	mux.HandleFunc("/api/processes", s.securityHeaders(s.authMiddleware(s.handleProcesses)))
 }
 
 // handleHealth 健康检查

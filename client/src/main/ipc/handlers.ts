@@ -696,7 +696,22 @@ export function setupIpcHandlers() {
   })
 
   // ==================== 本地文件系统 ====================
+
+  // 路径安全验证：禁止访问系统敏感目录
+  function validateLocalPath(targetPath: string): void {
+    const resolved = path.resolve(targetPath)
+    const forbidden = process.platform === 'win32'
+      ? ['C:\\Windows', 'C:\\Program Files', 'C:\\ProgramData']
+      : ['/etc/shadow', '/etc/sudoers', '/root/.ssh', '/proc', '/sys']
+    for (const f of forbidden) {
+      if (resolved.toLowerCase().startsWith(f.toLowerCase())) {
+        throw new Error(`Access denied: ${f}`)
+      }
+    }
+  }
+
   ipcMain.handle('fs:scanDirectory', async (_, dirPath: string, options?: { ignore?: string[] }) => {
+    validateLocalPath(dirPath)
     const ignore = options?.ignore || ['node_modules', '.git', '__pycache__', '.venv', 'venv']
     const files: { name: string; path: string; size: number; isDir: boolean }[] = []
     
@@ -723,6 +738,7 @@ export function setupIpcHandlers() {
   })
 
   ipcMain.handle('fs:packDirectory', async (_, dirPath: string, options?: { ignore?: string[] }) => {
+    validateLocalPath(dirPath)
     const ignore = options?.ignore || ['node_modules', '.git', '__pycache__', '.venv', 'venv', '.next', '.nuxt', 'target', 'vendor', 'dist', 'build']
     
     // 创建临时文件
@@ -790,6 +806,7 @@ export function setupIpcHandlers() {
   })
 
   ipcMain.handle('fs:readFile', async (_, filePath: string) => {
+    validateLocalPath(filePath)
     return fs.readFileSync(filePath)
   })
 
@@ -1082,7 +1099,22 @@ export function setupIpcHandlers() {
     }
   }) => {
     return new Promise((resolve) => {
-      const url = new URL(options.url)
+      // SSRF 防护：禁止访问内网地址
+      let url: URL
+      try {
+        url = new URL(options.url)
+      } catch {
+        return resolve({ success: false, status: 0, statusText: '', data: null, error: 'Invalid URL' })
+      }
+      const hostname = url.hostname
+      const blockedPatterns = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254']
+      const blockedPrefixes = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.']
+      if (blockedPatterns.includes(hostname) || blockedPrefixes.some(p => hostname.startsWith(p)) || hostname.startsWith('[')) {
+        return resolve({ success: false, status: 0, statusText: '', data: null, error: 'Access to internal networks denied' })
+      }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return resolve({ success: false, status: 0, statusText: '', data: null, error: 'Only http/https allowed' })
+      }
       const method = options.method || 'GET'
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',

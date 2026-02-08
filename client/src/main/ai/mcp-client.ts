@@ -65,7 +65,14 @@ export class MCPClient extends EventEmitter {
     if (this.servers.has(config.name)) return
 
     const proc = spawn(config.command, config.args || [], {
-      env: { ...process.env, ...config.env },
+      env: {
+        // 只传递必要的环境变量，不泄漏完整 process.env
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        LANG: process.env.LANG,
+        TERM: process.env.TERM,
+        ...config.env,
+      },
       stdio: ['pipe', 'pipe', 'pipe']
     })
 

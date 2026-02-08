@@ -103,6 +103,18 @@ const staticRoutes: RouteRecordRaw[] = [
     meta: { title: 'AI 助手', icon: 'ChatDotRound' }
   },
   {
+    path: '/ai-deploy',
+    name: 'AIDeploy',
+    component: () => import('../views/AIDeploy.vue'),
+    meta: { title: 'AI 部署', icon: 'Upload' }
+  },
+  {
+    path: '/ai-ops',
+    name: 'AIOps',
+    component: () => import('../views/AIOps.vue'),
+    meta: { title: 'AI 运维', icon: 'Setting' }
+  },
+  {
     path: '/cloud',
     name: 'Cloud',
     component: () => import('../views/Cloud.vue'),

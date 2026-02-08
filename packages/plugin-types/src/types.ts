@@ -15,8 +15,20 @@ export interface PluginMetadata {
   permissions: string[]
   capabilities?: PluginCapabilities
   config?: PluginConfigSchema
-  dependencies?: string[]
+  dependencies?: PluginDependencies
   minAppVersion?: string
+  keywords?: string[]
+  license?: string
+  screenshots?: string[]
+  changelog?: string
+}
+
+/**
+ * 插件依赖
+ */
+export interface PluginDependencies {
+  plugins?: Record<string, string>  // 插件依赖 { "plugin-id": "^1.0.0" }
+  npm?: Record<string, string>      // npm包依赖
 }
 
 /**
@@ -27,19 +39,44 @@ export interface PluginCapabilities {
   routes?: RouteDefinition[]
   tools?: ToolDefinition[]
   commands?: CommandDefinition[]
+  agents?: AgentDefinition[]
+  workflows?: WorkflowDefinition[]
+  prompts?: PromptTemplateDefinition[]
 }
 
 /**
- * 插件配置模式
+ * 插件配置模式（支持JSON Schema）
  */
 export interface PluginConfigSchema {
-  [key: string]: {
-    label: string
-    type: 'string' | 'number' | 'boolean' | 'password' | 'select'
-    description?: string
-    required?: boolean
-    default?: any
-    options?: Array<{ label: string; value: any }>
+  type?: 'object'
+  properties: Record<string, ConfigFieldSchema>
+  required?: string[]
+  title?: string
+  description?: string
+}
+
+/**
+ * 配置字段模式
+ */
+export interface ConfigFieldSchema {
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object'
+  title?: string
+  description?: string
+  default?: any
+  enum?: any[]
+  format?: 'password' | 'email' | 'url' | 'date' | 'color'
+  minimum?: number
+  maximum?: number
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+  items?: ConfigFieldSchema
+  properties?: Record<string, ConfigFieldSchema>
+  ui?: {
+    widget?: 'input' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'switch' | 'slider' | 'color' | 'date'
+    placeholder?: string
+    help?: string
+    order?: number
   }
 }
 
@@ -87,8 +124,9 @@ export interface ToolDefinition {
   category: string
   dangerous?: boolean
   parameters: Record<string, ParameterDefinition>
-  handler: (params: any) => Promise<any>
+  handler: (params: any) => Promise<any> | AsyncGenerator<any, void, unknown>
   permissions?: string[]
+  streaming?: boolean  // 支持流式输出
 }
 
 /**
@@ -132,6 +170,69 @@ export interface AgentToolDefinition {
     required: string[]
   }
   handler: string
+}
+
+/**
+ * AI Agent定义
+ */
+export interface AgentDefinition {
+  id: string
+  name: string
+  description: string
+  systemPrompt: string
+  tools: string[]  // 可用工具列表
+  temperature?: number
+  maxTokens?: number
+  icon?: string
+  category?: string
+}
+
+/**
+ * 工作流定义
+ */
+export interface WorkflowDefinition {
+  id: string
+  name: string
+  description: string
+  steps: WorkflowStep[]
+  icon?: string
+  category?: string
+}
+
+/**
+ * 工作流步骤
+ */
+export interface WorkflowStep {
+  id: string
+  type: 'tool' | 'agent' | 'condition' | 'loop'
+  name: string
+  config: {
+    tool?: string
+    agent?: string
+    params?: Record<string, any>
+    condition?: string
+    loopOver?: string
+  }
+  next?: string | string[]  // 下一步ID或条件分支
+}
+
+/**
+ * 提示词模板定义
+ */
+export interface PromptTemplateDefinition {
+  id: string
+  name: string
+  description: string
+  template: string
+  variables: Array<{
+    name: string
+    description: string
+    type: 'string' | 'number' | 'boolean'
+    required: boolean
+    default?: any
+  }>
+  category?: string
+  tags?: string[]
 }
 
 /**
@@ -285,5 +386,65 @@ export enum PluginPermission {
   
   // Agent权限
   AGENT_TOOL = 'agent:tool',
-  AGENT_CHAT = 'agent:chat'
+  AGENT_CHAT = 'agent:chat',
+  AGENT_REGISTER = 'agent:register',
+  WORKFLOW_REGISTER = 'workflow:register',
+  PROMPT_REGISTER = 'prompt:register'
+}
+
+/**
+ * 插件市场信息
+ */
+export interface PluginMarketInfo {
+  id: string
+  name: string
+  version: string
+  description: string
+  author: string
+  icon?: string
+  screenshots?: string[]
+  downloads: number
+  rating: number
+  ratingCount: number
+  tags: string[]
+  category: string
+  license: string
+  homepage?: string
+  repository?: string
+  publishedAt: string
+  updatedAt: string
+  size: number
+  verified: boolean
+}
+
+/**
+ * 插件安装状态
+ */
+export enum PluginInstallStatus {
+  NOT_INSTALLED = 'not_installed',
+  INSTALLING = 'installing',
+  INSTALLED = 'installed',
+  UPDATING = 'updating',
+  UPDATE_AVAILABLE = 'update_available',
+  ERROR = 'error'
+}
+
+/**
+ * 插件安装选项
+ */
+export interface PluginInstallOptions {
+  version?: string
+  force?: boolean
+  skipDependencies?: boolean
+}
+
+/**
+ * 插件更新信息
+ */
+export interface PluginUpdateInfo {
+  pluginId: string
+  currentVersion: string
+  latestVersion: string
+  changelog: string
+  breaking: boolean
 }

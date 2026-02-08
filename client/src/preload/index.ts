@@ -103,60 +103,68 @@ const electronAPI: ElectronAPI = {
     get: (serverId: string, projectName: string): Promise<ComposeProject> =>
       ipcRenderer.invoke('compose:get', serverId, projectName),
     up: (serverId: string, options: ComposeUpOptions, onOutput?: (line: string) => void): Promise<void> => {
-      if (onOutput) {
-        const channel = `compose:output:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onOutput(line))
-      }
-      return ipcRenderer.invoke('compose:up', serverId, options)
+      const channel = `compose:output:${serverId}`
+      const handler = onOutput ? (_: any, line: string) => onOutput(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:up', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     down: (serverId: string, options: ComposeDownOptions, onOutput?: (line: string) => void): Promise<void> => {
-      if (onOutput) {
-        const channel = `compose:output:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onOutput(line))
-      }
-      return ipcRenderer.invoke('compose:down', serverId, options)
+      const channel = `compose:output:${serverId}`
+      const handler = onOutput ? (_: any, line: string) => onOutput(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:down', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     restart: (serverId: string, options: ComposeServiceOptions, onOutput?: (line: string) => void): Promise<void> => {
-      if (onOutput) {
-        const channel = `compose:output:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onOutput(line))
-      }
-      return ipcRenderer.invoke('compose:restart', serverId, options)
+      const channel = `compose:output:${serverId}`
+      const handler = onOutput ? (_: any, line: string) => onOutput(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:restart', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     stop: (serverId: string, options: ComposeServiceOptions, onOutput?: (line: string) => void): Promise<void> => {
-      if (onOutput) {
-        const channel = `compose:output:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onOutput(line))
-      }
-      return ipcRenderer.invoke('compose:stop', serverId, options)
+      const channel = `compose:output:${serverId}`
+      const handler = onOutput ? (_: any, line: string) => onOutput(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:stop', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     start: (serverId: string, options: ComposeServiceOptions, onOutput?: (line: string) => void): Promise<void> => {
-      if (onOutput) {
-        const channel = `compose:output:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onOutput(line))
-      }
-      return ipcRenderer.invoke('compose:start', serverId, options)
+      const channel = `compose:output:${serverId}`
+      const handler = onOutput ? (_: any, line: string) => onOutput(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:start', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     logs: (serverId: string, options: ComposeLogOptions, onLog?: (line: string) => void): Promise<void> => {
-      if (onLog) {
-        const channel = `compose:logs:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onLog(line))
-      }
-      return ipcRenderer.invoke('compose:logs', serverId, options)
+      const channel = `compose:logs:${serverId}`
+      const handler = onLog ? (_: any, line: string) => onLog(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:logs', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     pull: (serverId: string, options: ComposeServiceOptions, onOutput?: (line: string) => void): Promise<void> => {
-      if (onOutput) {
-        const channel = `compose:output:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onOutput(line))
-      }
-      return ipcRenderer.invoke('compose:pull', serverId, options)
+      const channel = `compose:output:${serverId}`
+      const handler = onOutput ? (_: any, line: string) => onOutput(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:pull', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     build: (serverId: string, options: ComposeBuildOptions, onOutput?: (line: string) => void): Promise<void> => {
-      if (onOutput) {
-        const channel = `compose:output:${serverId}`
-        ipcRenderer.on(channel, (_, line) => onOutput(line))
-      }
-      return ipcRenderer.invoke('compose:build', serverId, options)
+      const channel = `compose:output:${serverId}`
+      const handler = onOutput ? (_: any, line: string) => onOutput(line) : null
+      if (handler) ipcRenderer.on(channel, handler)
+      return ipcRenderer.invoke('compose:build', serverId, options).finally(() => {
+        if (handler) ipcRenderer.removeListener(channel, handler)
+      })
     },
     validate: (serverId: string, projectPath: string): Promise<ComposeValidationResult> =>
       ipcRenderer.invoke('compose:validate', serverId, projectPath)
@@ -277,8 +285,13 @@ const electronAPI: ElectronAPI = {
 
   // Shell
   shell: {
-    openExternal: (url: string): Promise<void> =>
-      ipcRenderer.invoke('shell:openExternal', url)
+    openExternal: (url: string): Promise<void> => {
+      // 只允许 http/https 协议，防止恶意协议调用
+      if (/^https?:\/\//i.test(url)) {
+        return ipcRenderer.invoke('shell:openExternal', url)
+      }
+      return Promise.reject(new Error('Only http/https URLs are allowed'))
+    }
   },
 
   // 交互式终端

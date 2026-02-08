@@ -23,7 +23,7 @@ const builtinAgents: AgentDefinition[] = [
   {
     id: 'general',
     name: '通用助手',
-    icon: '🤖',
+    icon: 'agent-general',
     description: '通用服务器运维助手，可使用所有工具',
     systemPrompt: `你是 Runixo AI 助手，一个专业的服务器运维助手。
 重要规则：
@@ -36,7 +36,7 @@ const builtinAgents: AgentDefinition[] = [
   {
     id: 'diagnostics',
     name: '故障诊断',
-    icon: '🔍',
+    icon: 'agent-diagnostics',
     description: '专注系统故障诊断和性能分析',
     systemPrompt: `你是一个专业的服务器故障诊断专家。你的工作流程：
 1. 先收集系统信息（CPU、内存、磁盘、网络）
@@ -50,7 +50,7 @@ const builtinAgents: AgentDefinition[] = [
   {
     id: 'docker',
     name: 'Docker 管理',
-    icon: '🐳',
+    icon: 'agent-docker',
     description: '专注 Docker 容器和镜像管理',
     systemPrompt: `你是 Docker 容器管理专家。你可以：
 - 列出和管理容器（启动、停止、重启、删除）
@@ -64,7 +64,7 @@ const builtinAgents: AgentDefinition[] = [
   {
     id: 'security',
     name: '安全审计',
-    icon: '🛡️',
+    icon: 'agent-security',
     description: '专注服务器安全检查和加固',
     systemPrompt: `你是服务器安全审计专家。你的检查清单：
 1. 检查用户和权限配置
@@ -79,7 +79,7 @@ const builtinAgents: AgentDefinition[] = [
   {
     id: 'deploy',
     name: '应用部署',
-    icon: '🚀',
+    icon: 'agent-deploy',
     description: '专注应用部署和环境配置',
     systemPrompt: `你是应用部署专家。你可以：
 - 检查和安装运行环境

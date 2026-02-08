@@ -22,6 +22,7 @@ import { taskTools } from './tools/task'
 import { cronTools } from './tools/cron'
 import { userTools } from './tools/user'
 import { agentManager } from './agents'
+import * as secureStorage from '../security/secureStorage'
 
 export type CommandPolicy = 'auto-all' | 'auto-safe' | 'auto-file' | 'manual-all'
 
@@ -76,6 +77,11 @@ export class AIGateway extends EventEmitter {
       this.configPath = join(app.getPath('userData'), 'ai-config.json')
       const saved = JSON.parse(readFileSync(this.configPath, 'utf-8'))
       if (saved.provider) this.config = { ...this.config, ...saved }
+      // 从安全存储中恢复 API Key（不再从 JSON 读取）
+      try {
+        const storedKey = secureStorage.getCredential('ai_api_key')
+        if (storedKey) this.config.apiKey = storedKey
+      } catch {}
     } catch {}
     this.toolRegistry = toolRegistry
     this.registerDefaultTools()
@@ -114,7 +120,13 @@ export class AIGateway extends EventEmitter {
 
   setProvider(provider: string, config: Partial<AIConfig>): boolean {
     this.config = { ...this.config, provider: provider as AIConfig['provider'], ...config }
-    try { writeFileSync(this.configPath, JSON.stringify(this.config, null, 2)) } catch {}
+    // API Key 存入安全存储，不写入 JSON 文件
+    const configToSave = { ...this.config }
+    if (configToSave.apiKey) {
+      try { secureStorage.setCredential('ai_api_key', configToSave.apiKey) } catch {}
+      delete (configToSave as any).apiKey
+    }
+    try { writeFileSync(this.configPath, JSON.stringify(configToSave, null, 2)) } catch {}
     return true
   }
 

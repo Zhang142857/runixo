@@ -32,13 +32,15 @@
     <div class="chat-panel">
       <div class="chat-header">
         <div class="header-left">
-          <div class="ai-badge">{{ currentAgent?.icon || 'AI' }}</div>
+          <div class="ai-badge" v-html="getAgentSvg(currentAgent?.icon)"></div>
           <span class="title">{{ currentAgent?.name || 'Runixo 助手' }}</span>
         </div>
         <div class="header-right">
           <!-- Agent 选择器 -->
           <el-select v-model="selectedAgentId" placeholder="选择智能体" size="small" style="width: 130px">
-            <el-option v-for="agent in agents" :key="agent.id" :label="`${agent.icon} ${agent.name}`" :value="agent.id" />
+            <el-option v-for="agent in agents" :key="agent.id" :value="agent.id">
+              <span style="display:inline-flex;align-items:center;gap:6px"><span v-html="getAgentSvg(agent.icon, 16)"></span>{{ agent.name }}</span>
+            </el-option>
           </el-select>
           <el-select v-model="selectedServer" placeholder="选择服务器" size="small" clearable style="width: 150px">
             <el-option v-for="server in connectedServers" :key="server.id" :label="server.name" :value="server.id" />
@@ -198,6 +200,19 @@ const toolIconMap: Record<string, unknown> = {
 
 function getToolIcon(name: string) { return toolIconMap[name] || Monitor }
 function getServerName(id: string) { return connectedServers.value.find(s => s.id === id)?.name || id }
+
+const agentSvgMap: Record<string, string> = {
+  'agent-general': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="12" rx="2"/><circle cx="9" cy="10" r="1.5" fill="currentColor"/><circle cx="15" cy="10" r="1.5" fill="currentColor"/><path d="M8 20h8M12 16v4"/></svg>',
+  'agent-diagnostics': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/><path d="M8 11h6M11 8v6" stroke-width="1.2"/></svg>',
+  'agent-docker': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="10" width="20" height="8" rx="2"/><rect x="5" y="6" width="4" height="4" rx="0.5"/><rect x="10" y="6" width="4" height="4" rx="0.5"/><rect x="10" y="1.5" width="4" height="4" rx="0.5"/><path d="M5 14h3M10 14h3M15 14h3"/></svg>',
+  'agent-security': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L4 6v5c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6L12 2z"/><path d="M9 12l2 2 4-4" stroke-width="2"/></svg>',
+  'agent-deploy': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L4 8l8 6 8-6-8-6z"/><path d="M4 12l8 6 8-6"/><path d="M4 16l8 6 8-6"/></svg>'
+}
+function getAgentSvg(icon?: string, size = 20): string {
+  const svg = agentSvgMap[icon || '']
+  if (!svg) return `<span style="font-size:${size}px">AI</span>`
+  return svg.replace('<svg', `<svg width="${size}" height="${size}" style="display:inline-block;vertical-align:middle"`)
+}
 function formatTime(date: Date) { return new Date(date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }
 function formatDate(date: Date) {
   const d = new Date(date), diff = Date.now() - d.getTime()

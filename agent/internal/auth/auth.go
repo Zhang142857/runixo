@@ -85,10 +85,32 @@ func NewAuthInterceptor(token string) *AuthInterceptor {
 		token, _ = GenerateToken()
 	}
 
-	return &AuthInterceptor{
+	a := &AuthInterceptor{
 		token:         token,
 		requireAuth:   requireAuth,
 		failedAttempts: make(map[string]*attemptInfo),
+	}
+	// 启动定期清理过期的失败记录
+	go a.cleanupFailedAttempts()
+	return a
+}
+
+// cleanupFailedAttempts 定期清理过期的失败尝试记录，防止内存泄漏
+func (a *AuthInterceptor) cleanupFailedAttempts() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		a.mu.Lock()
+		now := time.Now()
+		for ip, info := range a.failedAttempts {
+			// 锁定已过期且超过 30 分钟未活动的记录可以清理
+			if now.After(info.lockedUntil) && info.count < MaxFailedAttempts {
+				delete(a.failedAttempts, ip)
+			} else if now.After(info.lockedUntil.Add(30 * time.Minute)) {
+				delete(a.failedAttempts, ip)
+			}
+		}
+		a.mu.Unlock()
 	}
 }
 
@@ -162,6 +184,22 @@ func (a *AuthInterceptor) isLocked(ip string) bool {
 func (a *AuthInterceptor) recordFailedAttempt(ip string) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	// 防止内存耗尽：限制最大记录数
+	const maxRecords = 10000
+	if len(a.failedAttempts) >= maxRecords {
+		// 清理已过期的记录
+		now := time.Now()
+		for k, v := range a.failedAttempts {
+			if now.After(v.lockedUntil) {
+				delete(a.failedAttempts, k)
+			}
+		}
+		// 如果仍然超限，拒绝新记录（保守策略）
+		if len(a.failedAttempts) >= maxRecords {
+			return false
+		}
+	}
 
 	if _, exists := a.failedAttempts[ip]; !exists {
 		a.failedAttempts[ip] = &attemptInfo{}

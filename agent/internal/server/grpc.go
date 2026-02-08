@@ -3,7 +3,10 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net"
@@ -12,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/creack/pty"
@@ -49,8 +53,8 @@ func NewAgentServer(version string, token string) *AgentServer {
 
 // Authenticate 认证
 func (s *AgentServer) Authenticate(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-	// 验证 token
-	if s.token != "" && req.Token != s.token {
+	// 使用常量时间比较防止时序攻击
+	if s.token != "" && subtle.ConstantTimeCompare([]byte(req.Token), []byte(s.token)) != 1 {
 		return &pb.AuthResponse{
 			Success: false,
 			Message: "认证令牌无效",
@@ -376,6 +380,8 @@ func (s *AgentServer) KillProcess(ctx context.Context, req *pb.KillProcessReques
 
 // UploadFile 流式文件上传
 func (s *AgentServer) UploadFile(stream pb.AgentService_UploadFileServer) error {
+	const maxUploadSize int64 = 1024 * 1024 * 1024 // 1GB 上传大小限制
+
 	var (
 		file       *os.File
 		filePath   string
@@ -403,11 +409,19 @@ func (s *AgentServer) UploadFile(stream pb.AgentService_UploadFileServer) error 
 						return status.Errorf(codes.Internal, "创建解压目录失败: %v", err)
 					}
 
-					// 解压
-					cmd := exec.Command("tar", "-xzf", filePath, "-C", extractTo)
+					// 解压（使用 --no-same-owner 防止权限问题，验证无路径遍历）
+					cmd := exec.Command("tar", "--no-same-owner", "-xzf", filePath, "-C", extractTo)
 					if output, err := cmd.CombinedOutput(); err != nil {
 						os.Remove(filePath) // 清理临时文件
 						return status.Errorf(codes.Internal, "解压失败: %v, output: %s", err, string(output))
+					}
+
+					// Zip-slip 防护：验证解压后所有文件都在目标目录内
+					if err := validateExtractedFiles(extractTo); err != nil {
+						// 清理解压的文件
+						os.RemoveAll(extractTo)
+						os.Remove(filePath)
+						return status.Errorf(codes.InvalidArgument, "解压安全检查失败: %v", err)
 					}
 
 					// 删除临时 tar.gz 文件
@@ -457,6 +471,11 @@ func (s *AgentServer) UploadFile(stream pb.AgentService_UploadFileServer) error 
 				Bool("is_tar_gz", isTarGz).
 				Str("extract_to", extractTo).
 				Msg("开始接收文件")
+
+			// 大小限制检查
+			if totalSize > maxUploadSize {
+				return status.Errorf(codes.InvalidArgument, "文件过大，超过 1GB 限制 (size: %d)", totalSize)
+			}
 
 			// 安全检查
 			cleanPath, err := security.SanitizePath(filePath)
@@ -509,6 +528,13 @@ func (s *AgentServer) UploadFile(stream pb.AgentService_UploadFileServer) error 
 				return status.Errorf(codes.Internal, "写入文件失败: %v", err)
 			}
 			bytesRecv += int64(n)
+
+			// 运行时大小检查（防止 totalSize 被伪造）
+			if bytesRecv > maxUploadSize {
+				file.Close()
+				os.Remove(filePath)
+				return status.Errorf(codes.ResourceExhausted, "上传数据超过 1GB 限制")
+			}
 
 			// 每 10MB 记录一次进度
 			if bytesRecv%(10*1024*1024) < int64(len(data.Chunk)) {
@@ -616,15 +642,15 @@ func (s *AgentServer) SearchDockerHub(ctx context.Context, req *pb.DockerSearchR
 		page = 1
 	}
 
-	// 构建 Docker Hub API URL
-	url := fmt.Sprintf("https://hub.docker.com/v2/search/repositories/?query=%s&page_size=%d&page=%d",
-		req.Query, pageSize, page)
+	// 构建 Docker Hub API URL（对查询参数进行 URL 编码）
+	apiURL := fmt.Sprintf("https://hub.docker.com/v2/search/repositories/?query=%s&page_size=%d&page=%d",
+		url.QueryEscape(req.Query), pageSize, page)
 
-	log.Info().Str("url", url).Str("query", req.Query).Msg("搜索 Docker Hub")
+	log.Info().Str("url", apiURL).Str("query", req.Query).Msg("搜索 Docker Hub")
 
 	// 发起 HTTP 请求
 	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(url)
+	resp, err := client.Get(apiURL)
 	if err != nil {
 		log.Error().Err(err).Msg("Docker Hub 搜索请求失败")
 		return &pb.DockerSearchResponse{
@@ -780,8 +806,13 @@ func (s *AgentServer) ProxyHttpRequest(ctx context.Context, req *pb.HttpProxyReq
 		httpReq.Header.Set(k, v)
 	}
 
-	// 发起请求
-	client := &http.Client{Timeout: timeout}
+	// 发起请求（禁用自动重定向，防止 302 绕过 SSRF 检查）
+	client := &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		return &pb.HttpProxyResponse{
@@ -842,18 +873,37 @@ func (s *AgentServer) handleEmergencyCommand(command string, args []string) *pb.
 
 	case "__emergency:status":
 		enabled, consecutive, history := s.emergencyMgr.GetStatus()
-		historyJSON := "["
-		for i, h := range history {
-			if i > 0 {
-				historyJSON += ","
-			}
-			historyJSON += fmt.Sprintf(`{"pid":%d,"name":"%s","reason":"%s","cpu":%.1f,"memory":%.1f,"is_docker":%v,"timestamp":%d}`,
-				h.PID, h.Name, h.Reason, h.CPU, h.Memory, h.IsDocker, h.Timestamp.Unix())
+		// 使用 json.Marshal 防止 JSON 注入
+		type historyEntry struct {
+			PID       int32   `json:"pid"`
+			Name      string  `json:"name"`
+			Reason    string  `json:"reason"`
+			CPU       float64 `json:"cpu"`
+			Memory    float64 `json:"memory"`
+			IsDocker  bool    `json:"is_docker"`
+			Timestamp int64   `json:"timestamp"`
 		}
-		historyJSON += "]"
-		stdout := fmt.Sprintf(`{"enabled":%v,"consecutive_high":%d,"samples_required":%d,"kill_history":%s}`,
-			enabled, consecutive, emergency.SamplesRequired, historyJSON)
-		return &pb.CommandResponse{ExitCode: 0, Stdout: stdout}
+		type statusResp struct {
+			Enabled         bool           `json:"enabled"`
+			ConsecutiveHigh int            `json:"consecutive_high"`
+			SamplesRequired int            `json:"samples_required"`
+			KillHistory     []historyEntry `json:"kill_history"`
+		}
+		resp := statusResp{
+			Enabled:         enabled,
+			ConsecutiveHigh: consecutive,
+			SamplesRequired: emergency.SamplesRequired,
+			KillHistory:     make([]historyEntry, 0, len(history)),
+		}
+		for _, h := range history {
+			resp.KillHistory = append(resp.KillHistory, historyEntry{
+				PID: int32(h.PID), Name: h.Name, Reason: h.Reason,
+				CPU: h.CPU, Memory: h.Memory, IsDocker: h.IsDocker,
+				Timestamp: h.Timestamp.Unix(),
+			})
+		}
+		stdout, _ := json.Marshal(resp)
+		return &pb.CommandResponse{ExitCode: 0, Stdout: string(stdout)}
 
 	default:
 		return nil
@@ -873,11 +923,37 @@ func (s *AgentServer) DownloadCertificate(ctx context.Context, req *pb.Empty) (*
 		return nil, status.Errorf(codes.NotFound, "证书文件不存在: %v", err)
 	}
 
-	// 计算证书指纹（简化版，实际应该解析证书后计算）
-	fingerprint := fmt.Sprintf("%x", certData[:32])
+	// 计算证书 SHA256 指纹
+	fingerprint := ""
+	block, _ := pem.Decode(certData)
+	if block != nil {
+		hash := sha256.Sum256(block.Bytes)
+		fingerprint = fmt.Sprintf("%x", hash)
+	}
 
 	return &pb.CertificateResponse{
 		Certificate: string(certData),
 		Fingerprint: fingerprint,
 	}, nil
+}
+
+// validateExtractedFiles 验证解压后的文件都在目标目录内（防止 zip-slip）
+func validateExtractedFiles(extractTo string) error {
+	absExtractTo, err := filepath.Abs(extractTo)
+	if err != nil {
+		return fmt.Errorf("无法解析目标目录: %v", err)
+	}
+	return filepath.Walk(absExtractTo, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		realPath, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			return nil
+		}
+		if !strings.HasPrefix(realPath, absExtractTo) {
+			return fmt.Errorf("检测到路径遍历: %s 指向 %s", path, realPath)
+		}
+		return nil
+	})
 }

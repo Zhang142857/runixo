@@ -18,10 +18,13 @@ export const environmentTools: ToolDefinition[] = [
       const results: Record<string, { installed: boolean; version?: string }> = {}
       for (const sw of software) {
         try {
-          const res = await context.executor.executeCommand(context.serverId, `which ${sw} 2>/dev/null && ${sw} --version 2>&1 | head -1`)
-          results[sw] = res.exitCode === 0 && res.stdout?.trim()
-            ? { installed: true, version: res.stdout.trim().split('\n').pop() }
-            : { installed: false }
+          const whichRes = await context.executor.executeCommand(context.serverId, `which ${sw} 2>/dev/null`)
+          if (whichRes.exitCode !== 0 || !whichRes.stdout?.trim()) {
+            results[sw] = { installed: false }
+            continue
+          }
+          const verRes = await context.executor.executeCommand(context.serverId, `${sw} --version 2>&1 | head -1`)
+          results[sw] = { installed: true, version: verRes.stdout?.trim()?.split('\n').pop() || 'unknown' }
         } catch { results[sw] = { installed: false } }
       }
       const installed = Object.values(results).filter(r => r.installed).length

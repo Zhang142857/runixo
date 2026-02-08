@@ -1274,6 +1274,444 @@ volumes:
     downloads: 13800,
     rating: 4.6,
     requirements: { memory: 32, cpu: 1, disk: 128 }
+  },
+  // ===== 热门开源自托管项目 =====
+  {
+    id: 'immich',
+    name: 'immich',
+    displayName: 'Immich',
+    description: '高性能自托管照片和视频管理方案，Google Photos 替代品',
+    icon: '📸',
+    category: AppCategory.WEB,
+    version: '1.99',
+    author: 'immich-app',
+    homepage: 'https://immich.app',
+    deployment: {
+      type: DeploymentType.COMPOSE,
+      composeFile: `version: '3.8'
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:{{version}}
+    ports:
+      - "{{port}}:2283"
+    volumes:
+      - upload_data:/usr/src/app/upload
+    environment:
+      DB_HOSTNAME: database
+      DB_USERNAME: {{db_user}}
+      DB_PASSWORD: {{db_password}}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+    depends_on:
+      - redis
+      - database
+    restart: always
+  redis:
+    image: redis:7-alpine
+    restart: always
+  database:
+    image: tensorchord/pgvecto-rs:pg16-v0.2.1
+    environment:
+      POSTGRES_USER: {{db_user}}
+      POSTGRES_PASSWORD: {{db_password}}
+      POSTGRES_DB: immich
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: always
+volumes:
+  upload_data:
+  db_data:
+`,
+      services: ['immich-server', 'redis', 'database'],
+      environment: []
+    },
+    configForm: [
+      { name: 'version', label: '版本', type: 'select', required: true, default: 'latest', options: [{ label: '最新版', value: 'latest' }, { label: '1.99', value: 'v1.99.0' }] },
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 2283 },
+      { name: 'db_user', label: '数据库用户', type: 'text', required: true, default: 'immich' },
+      { name: 'db_password', label: '数据库密码', type: 'password', required: true }
+    ],
+    healthCheck: { type: 'http', endpoint: '/api/server-info/ping', port: 2283, interval: 30, timeout: 5, retries: 3 },
+    tags: ['photos', 'gallery', 'backup', 'self-hosted'],
+    downloads: 89000,
+    rating: 4.9,
+    requirements: { memory: 2048, cpu: 2, disk: 10240 }
+  },
+  {
+    id: 'jellyfin',
+    name: 'jellyfin',
+    displayName: 'Jellyfin',
+    description: '免费开源媒体服务器，Plex/Emby 替代品',
+    icon: '🎬',
+    category: AppCategory.WEB,
+    version: '10.9',
+    author: 'Jellyfin',
+    homepage: 'https://jellyfin.org',
+    deployment: {
+      type: DeploymentType.DOCKER,
+      image: 'jellyfin/jellyfin',
+      tag: 'latest',
+      ports: [{ container: 8096, host: 8096, protocol: 'tcp' }],
+      volumes: [
+        { container: '/config', host: '{{data_path}}/config' },
+        { container: '/cache', host: '{{data_path}}/cache' },
+        { container: '/media', host: '{{media_path}}' }
+      ],
+      environment: [],
+      restart: 'always'
+    },
+    configForm: [
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 8096 },
+      { name: 'media_path', label: '媒体文件路径', type: 'text', required: true, default: '/opt/media' }
+    ],
+    healthCheck: { type: 'http', endpoint: '/health', port: 8096, interval: 30, timeout: 5, retries: 3 },
+    tags: ['media', 'streaming', 'video', 'music'],
+    downloads: 72000,
+    rating: 4.8,
+    requirements: { memory: 1024, cpu: 2, disk: 2048 }
+  },
+  {
+    id: 'homepage',
+    name: 'homepage',
+    displayName: 'Homepage',
+    description: '高度可定制的应用仪表盘，支持服务状态监控',
+    icon: '🏠',
+    category: AppCategory.WEB,
+    version: '0.8',
+    author: 'gethomepage',
+    homepage: 'https://gethomepage.dev',
+    deployment: {
+      type: DeploymentType.DOCKER,
+      image: 'ghcr.io/gethomepage/homepage',
+      tag: 'latest',
+      ports: [{ container: 3000, host: 3000, protocol: 'tcp' }],
+      volumes: [
+        { container: '/app/config', host: '{{data_path}}/config' },
+        { container: '/var/run/docker.sock', host: '/var/run/docker.sock', mode: 'ro' }
+      ],
+      environment: [],
+      restart: 'always'
+    },
+    configForm: [
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 3000 }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 3000, interval: 30, timeout: 5, retries: 3 },
+    tags: ['dashboard', 'homepage', 'monitoring'],
+    downloads: 45000,
+    rating: 4.7,
+    requirements: { memory: 128, cpu: 1, disk: 256 }
+  },
+  {
+    id: 'stirling-pdf',
+    name: 'stirling-pdf',
+    displayName: 'Stirling PDF',
+    description: '功能强大的自托管 PDF 工具箱，支持合并、拆分、转换等',
+    icon: '📄',
+    category: AppCategory.WEB,
+    version: '0.36',
+    author: 'Stirling-Tools',
+    homepage: 'https://github.com/Stirling-Tools/Stirling-PDF',
+    deployment: {
+      type: DeploymentType.DOCKER,
+      image: 'frooodle/s-pdf',
+      tag: 'latest',
+      ports: [{ container: 8080, host: 8080, protocol: 'tcp' }],
+      volumes: [
+        { container: '/usr/share/tessdata', host: '{{data_path}}/tessdata' },
+        { container: '/configs', host: '{{data_path}}/configs' }
+      ],
+      environment: [],
+      restart: 'always'
+    },
+    configForm: [
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 8080 }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 8080, interval: 30, timeout: 5, retries: 3 },
+    tags: ['pdf', 'tools', 'document', 'converter'],
+    downloads: 38000,
+    rating: 4.8,
+    requirements: { memory: 512, cpu: 1, disk: 1024 }
+  },
+  {
+    id: 'it-tools',
+    name: 'it-tools',
+    displayName: 'IT Tools',
+    description: '开发者实用工具集合，包含加密、转换、生成器等',
+    icon: '🧰',
+    category: AppCategory.WEB,
+    version: '2024.5',
+    author: 'CorentinTh',
+    homepage: 'https://it-tools.tech',
+    deployment: {
+      type: DeploymentType.DOCKER,
+      image: 'corentinth/it-tools',
+      tag: 'latest',
+      ports: [{ container: 80, host: 8070, protocol: 'tcp' }],
+      volumes: [],
+      environment: [],
+      restart: 'always'
+    },
+    configForm: [
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 8070 }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 8070, interval: 30, timeout: 5, retries: 3 },
+    tags: ['tools', 'developer', 'utilities'],
+    downloads: 32000,
+    rating: 4.7,
+    requirements: { memory: 64, cpu: 1, disk: 128 }
+  },
+  {
+    id: 'dockge',
+    name: 'dockge',
+    displayName: 'Dockge',
+    description: '简洁美观的 Docker Compose 管理面板',
+    icon: '🐋',
+    category: AppCategory.DEVOPS,
+    version: '1.4',
+    author: 'louislam',
+    homepage: 'https://dockge.kuma.pet',
+    deployment: {
+      type: DeploymentType.DOCKER,
+      image: 'louislam/dockge',
+      tag: 'latest',
+      ports: [{ container: 5001, host: 5001, protocol: 'tcp' }],
+      volumes: [
+        { container: '/var/run/docker.sock', host: '/var/run/docker.sock' },
+        { container: '/app/data', host: '{{data_path}}/data' },
+        { container: '/opt/stacks', host: '{{data_path}}/stacks' }
+      ],
+      environment: [{ name: 'DOCKGE_STACKS_DIR', value: '/opt/stacks' }],
+      restart: 'always'
+    },
+    configForm: [
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 5001 }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 5001, interval: 30, timeout: 5, retries: 3 },
+    tags: ['docker', 'compose', 'management', 'ui'],
+    downloads: 28000,
+    rating: 4.7,
+    requirements: { memory: 128, cpu: 1, disk: 256 }
+  },
+  {
+    id: 'paperless-ngx',
+    name: 'paperless-ngx',
+    displayName: 'Paperless-ngx',
+    description: '智能文档管理系统，支持 OCR 自动分类归档',
+    icon: '🗃️',
+    category: AppCategory.WEB,
+    version: '2.6',
+    author: 'paperless-ngx',
+    homepage: 'https://docs.paperless-ngx.com',
+    deployment: {
+      type: DeploymentType.COMPOSE,
+      composeFile: `version: '3.8'
+services:
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:{{version}}
+    ports:
+      - "{{port}}:8000"
+    volumes:
+      - data:/usr/src/paperless/data
+      - media:/usr/src/paperless/media
+      - consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://redis:6379
+      PAPERLESS_ADMIN_USER: {{admin_user}}
+      PAPERLESS_ADMIN_PASSWORD: {{admin_password}}
+    depends_on:
+      - redis
+    restart: always
+  redis:
+    image: redis:7-alpine
+    restart: always
+volumes:
+  data:
+  media:
+  consume:
+`,
+      services: ['paperless', 'redis'],
+      environment: []
+    },
+    configForm: [
+      { name: 'version', label: '版本', type: 'select', required: true, default: 'latest', options: [{ label: '最新版', value: 'latest' }, { label: '2.6', value: '2.6' }] },
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 8000 },
+      { name: 'admin_user', label: '管理员用户名', type: 'text', required: true, default: 'admin' },
+      { name: 'admin_password', label: '管理员密码', type: 'password', required: true }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 8000, interval: 30, timeout: 5, retries: 3 },
+    tags: ['document', 'ocr', 'archive', 'paperless'],
+    downloads: 35000,
+    rating: 4.8,
+    requirements: { memory: 1024, cpu: 2, disk: 2048 }
+  },
+  {
+    id: 'umami',
+    name: 'umami',
+    displayName: 'Umami',
+    description: '简洁隐私友好的网站分析工具，Google Analytics 替代品',
+    icon: '📊',
+    category: AppCategory.WEB,
+    version: '2.10',
+    author: 'umami-software',
+    homepage: 'https://umami.is',
+    deployment: {
+      type: DeploymentType.COMPOSE,
+      composeFile: `version: '3.8'
+services:
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-{{version}}
+    ports:
+      - "{{port}}:3000"
+    environment:
+      DATABASE_URL: postgresql://{{db_user}}:{{db_password}}@db:5432/umami
+      DATABASE_TYPE: postgresql
+    depends_on:
+      - db
+    restart: always
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: {{db_user}}
+      POSTGRES_PASSWORD: {{db_password}}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: always
+volumes:
+  db_data:
+`,
+      services: ['umami', 'db'],
+      environment: []
+    },
+    configForm: [
+      { name: 'version', label: '版本', type: 'select', required: true, default: 'latest', options: [{ label: '最新版', value: 'latest' }, { label: '2.10', value: 'v2.10.0' }] },
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 3000 },
+      { name: 'db_user', label: '数据库用户', type: 'text', required: true, default: 'umami' },
+      { name: 'db_password', label: '数据库密码', type: 'password', required: true }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 3000, interval: 30, timeout: 5, retries: 3 },
+    tags: ['analytics', 'privacy', 'website', 'statistics'],
+    downloads: 31000,
+    rating: 4.7,
+    requirements: { memory: 512, cpu: 1, disk: 1024 }
+  },
+  {
+    id: 'plausible',
+    name: 'plausible',
+    displayName: 'Plausible Analytics',
+    description: '轻量级隐私优先的网站分析工具',
+    icon: '📈',
+    category: AppCategory.WEB,
+    version: '2.1',
+    author: 'plausible',
+    homepage: 'https://plausible.io',
+    deployment: {
+      type: DeploymentType.COMPOSE,
+      composeFile: `version: '3.8'
+services:
+  plausible:
+    image: ghcr.io/plausible/community-edition:{{version}}
+    ports:
+      - "{{port}}:8000"
+    environment:
+      DATABASE_URL: postgres://{{db_user}}:{{db_password}}@db:5432/plausible
+      BASE_URL: http://localhost:{{port}}
+      SECRET_KEY_BASE: {{secret_key}}
+    depends_on:
+      - db
+      - clickhouse
+    restart: always
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: plausible
+      POSTGRES_USER: {{db_user}}
+      POSTGRES_PASSWORD: {{db_password}}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: always
+  clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    volumes:
+      - ch_data:/var/lib/clickhouse
+    restart: always
+volumes:
+  db_data:
+  ch_data:
+`,
+      services: ['plausible', 'db', 'clickhouse'],
+      environment: []
+    },
+    configForm: [
+      { name: 'version', label: '版本', type: 'select', required: true, default: 'latest', options: [{ label: '最新版', value: 'latest' }, { label: '2.1', value: 'v2.1.0' }] },
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 8000 },
+      { name: 'db_user', label: '数据库用户', type: 'text', required: true, default: 'plausible' },
+      { name: 'db_password', label: '数据库密码', type: 'password', required: true },
+      { name: 'secret_key', label: '密钥', type: 'password', required: true }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 8000, interval: 30, timeout: 5, retries: 3 },
+    tags: ['analytics', 'privacy', 'website'],
+    downloads: 27000,
+    rating: 4.6,
+    requirements: { memory: 1024, cpu: 2, disk: 2048 }
+  },
+  {
+    id: 'excalidraw',
+    name: 'excalidraw',
+    displayName: 'Excalidraw',
+    description: '手绘风格的在线白板协作工具',
+    icon: '🎨',
+    category: AppCategory.WEB,
+    version: '0.17',
+    author: 'excalidraw',
+    homepage: 'https://excalidraw.com',
+    deployment: {
+      type: DeploymentType.DOCKER,
+      image: 'excalidraw/excalidraw',
+      tag: 'latest',
+      ports: [{ container: 80, host: 3050, protocol: 'tcp' }],
+      volumes: [],
+      environment: [],
+      restart: 'always'
+    },
+    configForm: [
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 3050 }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 3050, interval: 30, timeout: 5, retries: 3 },
+    tags: ['whiteboard', 'drawing', 'collaboration'],
+    downloads: 24000,
+    rating: 4.8,
+    requirements: { memory: 128, cpu: 1, disk: 256 }
+  },
+  {
+    id: 'openclaw',
+    name: 'openclaw',
+    displayName: 'OpenClaw',
+    description: '开源个人 AI 助手，支持本地运行，可连接多种聊天平台自动执行任务',
+    icon: '🦞',
+    category: AppCategory.OTHER,
+    version: '1.0',
+    author: 'openclaw',
+    homepage: 'https://github.com/openclaw/openclaw',
+    deployment: {
+      type: DeploymentType.DOCKER,
+      image: 'ghcr.io/openclaw/openclaw',
+      tag: 'latest',
+      ports: [{ container: 3000, host: 3100, protocol: 'tcp' }],
+      volumes: [
+        { container: '/app/data', host: '{{data_path}}/data' }
+      ],
+      environment: [],
+      restart: 'always'
+    },
+    configForm: [
+      { name: 'port', label: '访问端口', type: 'number', required: true, default: 3100 }
+    ],
+    healthCheck: { type: 'http', endpoint: '/', port: 3100, interval: 30, timeout: 5, retries: 3 },
+    tags: ['ai', 'assistant', 'agent', 'automation', 'openclaw'],
+    downloads: 106000,
+    rating: 4.9,
+    requirements: { memory: 512, cpu: 2, disk: 1024 }
   }
 ]
 

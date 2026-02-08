@@ -152,6 +152,14 @@
             <el-icon><ChatDotRound /></el-icon>
             <span>AI 助手</span>
           </el-menu-item>
+          <el-menu-item index="/ai-deploy">
+            <el-icon><Upload /></el-icon>
+            <span>AI 部署</span>
+          </el-menu-item>
+          <el-menu-item index="/ai-ops">
+            <el-icon><Setting /></el-icon>
+            <span>AI 运维</span>
+          </el-menu-item>
           <el-menu-item index="/cloud">
             <el-icon><Cloudy /></el-icon>
             <span>云服务</span>

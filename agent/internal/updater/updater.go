@@ -94,7 +94,7 @@ func NewUpdater(currentVersion, dataDir string) (*Updater, error) {
 		config:         DefaultConfig(),
 		currentVersion: currentVersion,
 		dataDir:        dataDir,
-		updateURL:      "https://api.runixo.dev",
+		updateURL:      "https://runixo.top",
 		ctx:            ctx,
 		cancel:         cancel,
 		progressChan:   make(chan *DownloadProgress, 10),
@@ -235,7 +235,7 @@ func (u *Updater) CheckUpdate() (*UpdateInfo, error) {
 	u.mu.Unlock()
 
 	// 构建检查 URL
-	url := fmt.Sprintf("%s/api/check?version=%s&channel=%s&os=%s&arch=%s",
+	url := fmt.Sprintf("%s/api/v1/agent/check?version=%s&channel=%s&os=%s&arch=%s",
 		u.updateURL,
 		u.currentVersion,
 		u.config.UpdateChannel,
@@ -275,63 +275,24 @@ func (u *Updater) DownloadUpdate(version string, progressChan chan<- *DownloadPr
 		return "", fmt.Errorf("版本 %s 不可用", version)
 	}
 
-	// 创建下载目录
-	downloadDir := filepath.Join(u.dataDir, "downloads")
-	if err := os.MkdirAll(downloadDir, 0755); err != nil {
-		return "", err
-	}
-
-	// 下载文件
-	downloadPath := filepath.Join(downloadDir, fmt.Sprintf("runixo-agent-%s", version))
-	if runtime.GOOS == "windows" {
-		downloadPath += ".exe"
-	}
-
-	if err := u.downloadFile(info.DownloadURL, downloadPath, info.Size, progressChan); err != nil {
-		return "", err
-	}
-
-	// 验证校验和
-	if progressChan != nil {
-		progressChan <- &DownloadProgress{
-			Downloaded: info.Size,
-			Total:      info.Size,
-			Percent:    100,
-			Status:     "verifying",
-		}
-	}
-
-	if info.Checksum != "" {
-		valid, err := verifyChecksum(downloadPath, info.Checksum)
-		if err != nil {
-			return "", fmt.Errorf("验证校验和失败: %w", err)
-		}
-		if !valid {
-			os.Remove(downloadPath)
-			return "", fmt.Errorf("校验和不匹配")
-		}
-	}
-
-	if progressChan != nil {
-		progressChan <- &DownloadProgress{
-			Downloaded: info.Size,
-			Total:      info.Size,
-			Percent:    100,
-			Status:     "ready",
-		}
-	}
-
-	return downloadPath, nil
+	return u.downloadAndExtract(info, progressChan)
 }
 
-// downloadFile 下载文件
-func (u *Updater) downloadFile(url, destPath string, totalSize int64, progressChan chan<- *DownloadProgress) error {
-	httpClient := &http.Client{Timeout: 30 * time.Second}
-	resp, err := httpClient.Get(url)
+// downloadFile 下载文件（使用 context 控制连接超时，不限制 body 读取时间）
+func (u *Updater) downloadFile(downloadURL, destPath string, totalSize int64, progressChan chan<- *DownloadProgress) error {
+	ctx, cancel := context.WithTimeout(u.ctx, 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	// 连接已建立，取消连接超时，后续读取不限时
+	cancel()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("下载失败: %s", resp.Status)
@@ -376,57 +337,93 @@ func (u *Updater) downloadFile(url, destPath string, totalSize int64, progressCh
 	return nil
 }
 
-// ApplyUpdate 应用更新
+// ApplyUpdate 应用更新（gRPC 入口，从已下载的文件应用）
 func (u *Updater) ApplyUpdate(version string) error {
 	downloadDir := filepath.Join(u.dataDir, "downloads")
-	downloadPath := filepath.Join(downloadDir, fmt.Sprintf("runixo-agent-%s", version))
+	binaryPath := filepath.Join(downloadDir, "runixo-agent")
 	if runtime.GOOS == "windows" {
-		downloadPath += ".exe"
+		binaryPath += ".exe"
+	}
+	return u.applyBinary(binaryPath, version)
+}
+
+// downloadAndExtract 下载 tar.gz 并提取二进制
+func (u *Updater) downloadAndExtract(info *UpdateInfo, progressChan chan<- *DownloadProgress) (string, error) {
+	downloadDir := filepath.Join(u.dataDir, "downloads")
+	if err := os.MkdirAll(downloadDir, 0755); err != nil {
+		return "", err
 	}
 
-	if _, err := os.Stat(downloadPath); os.IsNotExist(err) {
-		return fmt.Errorf("更新文件不存在: %s", downloadPath)
+	// 下载 tar.gz
+	tarPath := filepath.Join(downloadDir, fmt.Sprintf("runixo-agent-%s.tar.gz", info.LatestVersion))
+	if err := u.downloadFile(info.DownloadURL, tarPath, info.Size, progressChan); err != nil {
+		return "", err
 	}
 
-	// 获取当前可执行文件路径
+	// 验证校验和
+	if progressChan != nil {
+		progressChan <- &DownloadProgress{Downloaded: info.Size, Total: info.Size, Percent: 100, Status: "verifying"}
+	}
+	if info.Checksum != "" {
+		valid, err := verifyChecksum(tarPath, info.Checksum)
+		if err != nil {
+			os.Remove(tarPath)
+			return "", fmt.Errorf("验证校验和失败: %w", err)
+		}
+		if !valid {
+			os.Remove(tarPath)
+			return "", fmt.Errorf("校验和不匹配")
+		}
+	}
+
+	// 解压提取二进制
+	binaryName := "runixo-agent"
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+	binaryPath := filepath.Join(downloadDir, binaryName)
+
+	cmd := exec.Command("tar", "--no-same-owner", "-xzf", tarPath, "-C", downloadDir, binaryName)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		os.Remove(tarPath)
+		return "", fmt.Errorf("解压失败: %v, output: %s", err, string(output))
+	}
+	os.Remove(tarPath)
+
+	if progressChan != nil {
+		progressChan <- &DownloadProgress{Downloaded: info.Size, Total: info.Size, Percent: 100, Status: "ready"}
+	}
+	return binaryPath, nil
+}
+
+// applyBinary 替换当前二进制并重启
+func (u *Updater) applyBinary(binaryPath, version string) error {
+	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+		return fmt.Errorf("更新文件不存在: %s", binaryPath)
+	}
+
 	currentExe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("获取当前可执行文件路径失败: %w", err)
 	}
 
-	// 备份当前版本
+	// 备份 → 替换 → 设权限
 	backupPath := currentExe + ".backup"
 	if err := os.Rename(currentExe, backupPath); err != nil {
 		return fmt.Errorf("备份当前版本失败: %w", err)
 	}
-
-	// 复制新版本
-	if err := copyFile(downloadPath, currentExe); err != nil {
-		// 恢复备份
+	if err := copyFile(binaryPath, currentExe); err != nil {
 		os.Rename(backupPath, currentExe)
 		return fmt.Errorf("安装新版本失败: %w", err)
 	}
-
-	// 设置执行权限
 	if runtime.GOOS != "windows" {
-		if err := os.Chmod(currentExe, 0755); err != nil {
-			log.Warn().Err(err).Msg("设置执行权限失败")
-		}
+		os.Chmod(currentExe, 0755)
 	}
 
-	// 记录更新
 	u.recordUpdate(version, true, "")
-
-	// 清理
-	os.Remove(downloadPath)
-	// 保留备份文件，下次更新时自动清理
-	log.Info().Str("backup", backupPath).Msg("备份已保留，可手动删除")
-
-	log.Info().Str("version", version).Msg("更新已应用，需要重启服务")
-
-	// 重启服务
+	os.Remove(binaryPath)
+	log.Info().Str("version", version).Msg("更新已应用，即将重启服务")
 	go u.restartService()
-
 	return nil
 }
 
@@ -447,14 +444,14 @@ func (u *Updater) DownloadAndApply(info *UpdateInfo) error {
 		}
 	}()
 
-	// 下载
-	_, err := u.DownloadUpdate(info.LatestVersion, progressChan)
+	// 直接下载，不再重复 CheckUpdate
+	binaryPath, err := u.downloadAndExtract(info, progressChan)
 	if err != nil {
 		return err
 	}
 
-	// 应用
-	return u.ApplyUpdate(info.LatestVersion)
+	// 应用（传入已解压的二进制路径）
+	return u.applyBinary(binaryPath, info.LatestVersion)
 }
 
 // restartService 重启服务
