@@ -44,7 +44,7 @@ function createWindow() {
         'Content-Security-Policy': [
           isDev
             ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' data:; font-src 'self' data:"
-            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
+            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://runixo.top https://*.runixo.top https://hub.docker.com; img-src 'self' data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
         ]
       }
     })
