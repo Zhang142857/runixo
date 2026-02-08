@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-agent:
+    name: Build Agent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: agent/go.sum
+      
+      - name: Build Agent
+        run: |
+          cd agent
+          go build -v ./cmd/agent
+      
+      - name: Test Agent
+        run: |
+          cd agent
+          go test -v ./...
+
+  build-client:
+    name: Build Client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: client/pnpm-lock.yaml
+      
+      - name: Install dependencies
+        run: |
+          cd client
+          pnpm install --frozen-lockfile
+      
+      - name: Build Client
+        run: |
+          cd client
+          pnpm build

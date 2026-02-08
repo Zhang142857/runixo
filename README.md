@@ -1,5 +1,7 @@
 # Runixo
 
+<!-- AI-Native Server Management Platform -->
+
 <p align="center">
   <img src="server/src/public/logo.svg" width="80" height="80" alt="Runixo">
 </p>
