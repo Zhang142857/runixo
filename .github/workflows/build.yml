@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-agent:
@@ -131,3 +131,49 @@ jobs:
           path: |
             client/release/*.dmg
             client/release/*.zip
+
+  release:
+    name: Publish Release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-agent, build-client-windows, build-client-linux, build-client-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List files
+        run: find dist -type f | head -30
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          find . -type f -exec sha256sum {} \; > checksums.txt
+          cat checksums.txt
+
+      - name: Publish to latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Build
+          body: |
+            自动构建，每次提交到 main 分支后更新。
+
+            构建时间: ${{ github.event.head_commit.timestamp }}
+            提交: ${{ github.sha }}
+            消息: ${{ github.event.head_commit.message }}
+
+            ---
+
+            | 文件 | 说明 |
+            |------|------|
+            | `runixo-agent-linux-*` | Agent 二进制 |
+            | `Runixo Setup *.exe` | Windows 安装包 |
+            | `Runixo *.exe` | Windows 便携版 |
+            | `Runixo-*.dmg` | macOS 安装包 |
+            | `Runixo-*.AppImage` | Linux 安装包 |
+          prerelease: true
+          make_latest: false
+          files: |
+            dist/*
