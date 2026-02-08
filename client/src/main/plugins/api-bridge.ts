@@ -5,7 +5,8 @@
 
 import { EventEmitter } from 'events'
 import { BrowserWindow, ipcMain } from 'electron'
-import { LoadedPlugin, PluginPermission } from './loader'
+import { LoadedPlugin, PluginPermission, pluginLoader } from './loader'
+import { pluginRuntime } from './runtime'
 
 // 插件 API 接口
 export interface PluginAPI {
@@ -448,7 +449,7 @@ export function createPluginAPI(plugin: LoadedPlugin): PluginAPI {
 export function setupPluginIPC(): void {
   // 处理插件相关的 IPC 消息
   ipcMain.handle('plugin:list', async () => {
-    const { pluginLoader } = require('./loader')
+    // pluginLoader imported at top level
     return pluginLoader.getPlugins().map(p => ({
       id: p.manifest.id,
       name: p.manifest.name,
@@ -463,59 +464,59 @@ export function setupPluginIPC(): void {
   })
 
   ipcMain.handle('plugin:install', async (_, pluginId: string, source?: string) => {
-    const { pluginLoader } = require('./loader')
+    // pluginLoader imported at top level
     return await pluginLoader.installPlugin(source || 'official', pluginId)
   })
 
   ipcMain.handle('plugin:installFromFile', async (_, filePath: string) => {
-    const { pluginLoader } = require('./loader')
+    // pluginLoader imported at top level
     const plugin = await pluginLoader.installFromFile(filePath)
     return { success: true, pluginId: plugin.manifest.id }
   })
 
   ipcMain.handle('plugin:uninstall', async (_, pluginId: string) => {
-    const { pluginLoader } = require('./loader')
+    // pluginLoader imported at top level
     await pluginLoader.uninstallPlugin(pluginId)
     return { success: true }
   })
 
   ipcMain.handle('plugin:enable', async (_, pluginId: string) => {
-    const { pluginLoader } = require('./loader')
-    const { pluginRuntime } = require('./runtime')
+    // pluginLoader imported at top level
+    // pluginRuntime imported at top level
     await pluginLoader.enablePlugin(pluginId)
     await pluginRuntime.activate(pluginId)
     return { success: true }
   })
 
   ipcMain.handle('plugin:disable', async (_, pluginId: string) => {
-    const { pluginLoader } = require('./loader')
-    const { pluginRuntime } = require('./runtime')
+    // pluginLoader imported at top level
+    // pluginRuntime imported at top level
     await pluginRuntime.deactivate(pluginId)
     await pluginLoader.disablePlugin(pluginId)
     return { success: true }
   })
 
   ipcMain.handle('plugin:getConfig', async (_, pluginId: string) => {
-    const { pluginLoader } = require('./loader')
+    // pluginLoader imported at top level
     const plugin = pluginLoader.getPlugin(pluginId)
     return plugin?.config || {}
   })
 
   ipcMain.handle('plugin:setConfig', async (_, pluginId: string, config: Record<string, unknown>) => {
-    const { pluginLoader } = require('./loader')
-    const { pluginRuntime } = require('./runtime')
+    // pluginLoader imported at top level
+    // pluginRuntime imported at top level
     pluginLoader.updatePluginConfig(pluginId, config)
     pluginRuntime.notifyConfigChange(pluginId, config)
     return { success: true }
   })
 
   ipcMain.handle('plugin:getMenus', async () => {
-    const { pluginLoader } = require('./loader')
+    // pluginLoader imported at top level
     return pluginLoader.getPluginMenus()
   })
 
   ipcMain.handle('plugin:getRoutes', async () => {
-    const { pluginLoader } = require('./loader')
+    // pluginLoader imported at top level
     return pluginLoader.getPluginRoutes()
   })
 
