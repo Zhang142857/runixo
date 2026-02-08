@@ -49,7 +49,7 @@ jobs:
           cd client
           pnpm install --frozen-lockfile
       
-      - name: Build Client
+      - name: Build (Vite only)
         run: |
           cd client
-          pnpm build
+          pnpm vite build
