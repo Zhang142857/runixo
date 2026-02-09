@@ -434,6 +434,12 @@ export interface ElectronAPI {
   shell: {
     openExternal: (url: string) => Promise<void>
   }
+  updater: {
+    check: () => Promise<{ available: boolean; version?: string }>
+  }
+  app: {
+    getVersion: () => Promise<string>
+  }
   terminal: {
     start: (serverId: string, sessionId: string, rows: number, cols: number) => Promise<{ success: boolean; sessionId: string }>
     write: (serverId: string, sessionId: string, data: string) => Promise<{ success: boolean }>

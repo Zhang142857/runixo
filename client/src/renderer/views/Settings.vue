@@ -1281,10 +1281,17 @@ function resetAllSettings() {
 
 function checkUpdate() {
   checkingUpdate.value = true
-  setTimeout(() => {
+  window.electronAPI?.updater?.check().then((result: any) => {
     checkingUpdate.value = false
-    ElMessage.info('当前已是最新版本')
-  }, 1500)
+    if (result?.available) {
+      ElMessage.success(`发现新版本: ${result.version}`)
+    } else {
+      ElMessage.info('当前已是最新版本')
+    }
+  }).catch(() => {
+    checkingUpdate.value = false
+    ElMessage.error('检查更新失败')
+  })
 }
 
 function openLink(url: string) {

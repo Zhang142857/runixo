@@ -287,6 +287,16 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('fs:readFile', path)
   },
 
+  // 更新 & 版本
+  updater: {
+    check: (): Promise<{ available: boolean; version?: string }> =>
+      ipcRenderer.invoke('updater:check'),
+  },
+  app: {
+    getVersion: (): Promise<string> =>
+      ipcRenderer.invoke('app:getVersion'),
+  },
+
   // Shell
   shell: {
     openExternal: (url: string): Promise<void> => {

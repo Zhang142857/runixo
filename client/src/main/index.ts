@@ -181,6 +181,9 @@ app.whenReady().then(async () => {
     }
   })
 
+  // IPC: 获取客户端版本
+  ipcMain.handle('app:getVersion', () => app.getVersion())
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
