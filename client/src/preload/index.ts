@@ -600,6 +600,26 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('appStore:uninstall', instanceId),
     getStats: (): Promise<any> =>
       ipcRenderer.invoke('appStore:getStats')
+  },
+
+  // 应用路径
+  app: {
+    getPath: (name: string): Promise<string> =>
+      ipcRenderer.invoke('app:getPath', name)
+  },
+
+  // 本地文件系统操作
+  fsLocal: {
+    ensureDir: (dirPath: string): Promise<void> =>
+      ipcRenderer.invoke('fs:ensureDir', dirPath),
+    readFile: (filePath: string): Promise<string> =>
+      ipcRenderer.invoke('fs:readFile', filePath),
+    writeFile: (filePath: string, data: string): Promise<void> =>
+      ipcRenderer.invoke('fs:writeFile', filePath, data),
+    deleteFile: (filePath: string): Promise<void> =>
+      ipcRenderer.invoke('fs:deleteFile', filePath),
+    exists: (filePath: string): Promise<boolean> =>
+      ipcRenderer.invoke('fs:exists', filePath)
   }
 }
 

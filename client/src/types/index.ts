@@ -533,6 +533,16 @@ export interface ElectronAPI {
     uninstallApp: (instanceId: string) => Promise<any>
     getStats: () => Promise<any>
   }
+  app: {
+    getPath: (name: string) => Promise<string>
+  }
+  fsLocal: {
+    ensureDir: (dirPath: string) => Promise<void>
+    readFile: (filePath: string) => Promise<string>
+    writeFile: (filePath: string, data: string) => Promise<void>
+    deleteFile: (filePath: string) => Promise<void>
+    exists: (filePath: string) => Promise<boolean>
+  }
 }
 
 // 全局 Window 接口扩展

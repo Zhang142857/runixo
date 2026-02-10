@@ -36,11 +36,12 @@
     "axios": "^1.6.7",
     "bcrypt-pbkdf": "^1.0.2",
     "echarts": "^5.5.0",
-    "element-plus": "^2.5.6",
     "electron-updater": "^6.1.7",
+    "element-plus": "^2.5.6",
     "extract-zip": "^2.0.1",
     "monaco-editor": "^0.46.0",
     "pinia": "^2.1.7",
+    "rollup": "^4.57.1",
     "safer-buffer": "^2.1.2",
     "ssh2": "^1.17.0",
     "tweetnacl": "^1.0.3",
@@ -54,6 +55,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^20.11.24",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/tsconfig": "^0.5.1",
@@ -62,6 +64,8 @@
     "electron-builder": "^24.13.3",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.22.0",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
     "sass": "^1.71.1",
     "typescript": "^5.3.3",
     "unplugin-auto-import": "^0.17.5",
@@ -131,5 +135,8 @@
       "owner": "Zhang142857",
       "repo": "runixo"
     }
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.57.1"
   }
 }

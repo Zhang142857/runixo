@@ -1351,3 +1351,34 @@ interface ServerConfig {
   token: string
   useTls?: boolean
 }
+
+
+// ==================== 文件系统操作 ====================
+ipcMain.handle('app:getPath', async (_, name: string) => {
+  const { app } = require('electron')
+  return app.getPath(name as any)
+})
+
+ipcMain.handle('fs:ensureDir', async (_, dirPath: string) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true })
+  }
+})
+
+ipcMain.handle('fs:readFile', async (_, filePath: string) => {
+  return fs.readFileSync(filePath, 'utf-8')
+})
+
+ipcMain.handle('fs:writeFile', async (_, filePath: string, data: string) => {
+  fs.writeFileSync(filePath, data, 'utf-8')
+})
+
+ipcMain.handle('fs:deleteFile', async (_, filePath: string) => {
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath)
+  }
+})
+
+ipcMain.handle('fs:exists', async (_, filePath: string) => {
+  return fs.existsSync(filePath)
+})
