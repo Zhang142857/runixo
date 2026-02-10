@@ -106,8 +106,11 @@ export function registerSshHandlers() {
           const installRes = await sshExec(conn, installCmd)
           
           // 调试：输出完整的安装脚本输出
+          sendLog(win, `[DEBUG] exit code: ${installRes.code}`, 'info')
           sendLog(win, `[DEBUG] stdout length: ${installRes.stdout.length}`, 'info')
           sendLog(win, `[DEBUG] stderr length: ${installRes.stderr.length}`, 'info')
+          sendLog(win, `[DEBUG] stdout: ${installRes.stdout}`, 'info')
+          sendLog(win, `[DEBUG] stderr: ${installRes.stderr}`, 'error')
           
           if (installRes.code !== 0) {
             sendLog(win, `❌ 安装失败: ${installRes.stderr || installRes.stdout}`, 'error')
