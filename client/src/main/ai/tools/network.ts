@@ -29,7 +29,7 @@ export const pingTool: ToolDefinition = {
   displayName: 'Ping 测试',
   description: '测试与目标主机的网络连通性，返回延迟和丢包率',
   category: 'network',
-  dangerous: false,
+  dangerous: true,
   parameters: {
     type: 'object',
     properties: {
@@ -126,7 +126,7 @@ export const portScanTool: ToolDefinition = {
   displayName: '端口扫描',
   description: '扫描目标主机的指定端口，检查端口是否开放',
   category: 'network',
-  dangerous: false,
+  dangerous: true,
   parameters: {
     type: 'object',
     properties: {
@@ -245,7 +245,7 @@ export const dnsLookupTool: ToolDefinition = {
   displayName: 'DNS 查询',
   description: '查询域名的 DNS 记录，支持 A、AAAA、MX、NS、TXT、CNAME 等记录类型',
   category: 'network',
-  dangerous: false,
+  dangerous: true,
   parameters: {
     type: 'object',
     properties: {
@@ -326,7 +326,7 @@ export const tracerouteTool: ToolDefinition = {
   displayName: '路由追踪',
   description: '追踪到目标主机的网络路由路径',
   category: 'network',
-  dangerous: false,
+  dangerous: true,
   parameters: {
     type: 'object',
     properties: {
@@ -417,7 +417,7 @@ export const netstatTool: ToolDefinition = {
   displayName: '网络连接统计',
   description: '查看服务器的网络连接状态统计',
   category: 'network',
-  dangerous: false,
+  dangerous: true,
   parameters: {
     type: 'object',
     properties: {

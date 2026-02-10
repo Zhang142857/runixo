@@ -1353,32 +1353,46 @@ interface ServerConfig {
 }
 
 
-// ==================== 文件系统操作 ====================
+// ==================== 文件系统操作（限制到 userData 目录）====================
+const { app: electronApp } = require('electron')
+const userDataDir = electronApp.getPath('userData')
+
+function assertLocalPath(filePath: string) {
+  const resolved = path.resolve(filePath)
+  if (!resolved.startsWith(userDataDir)) {
+    throw new Error(`路径安全检查失败: 只允许访问 userData 目录`)
+  }
+}
+
 ipcMain.handle('app:getPath', async (_, name: string) => {
-  const { app } = require('electron')
-  return app.getPath(name as any)
+  return electronApp.getPath(name as any)
 })
 
 ipcMain.handle('fs:ensureDir', async (_, dirPath: string) => {
+  assertLocalPath(dirPath)
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true })
   }
 })
 
 ipcMain.handle('fs:readFile', async (_, filePath: string) => {
+  assertLocalPath(filePath)
   return fs.readFileSync(filePath, 'utf-8')
 })
 
 ipcMain.handle('fs:writeFile', async (_, filePath: string, data: string) => {
+  assertLocalPath(filePath)
   fs.writeFileSync(filePath, data, 'utf-8')
 })
 
 ipcMain.handle('fs:deleteFile', async (_, filePath: string) => {
+  assertLocalPath(filePath)
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath)
   }
 })
 
 ipcMain.handle('fs:exists', async (_, filePath: string) => {
+  assertLocalPath(filePath)
   return fs.existsSync(filePath)
 })

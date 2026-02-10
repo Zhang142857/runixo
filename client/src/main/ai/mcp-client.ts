@@ -72,6 +72,9 @@ export class MCPClient extends EventEmitter {
         LANG: process.env.LANG,
         TERM: process.env.TERM,
         ...config.env,
+        // 安全修复：安全变量不可被覆盖
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
       },
       stdio: ['pipe', 'pipe', 'pipe']
     })

@@ -184,14 +184,16 @@ export class ToolRegistry extends EventEmitter {
   /**
    * 注册工具
    */
-  register(tool: ToolDefinition): void {
+  register(tool: ToolDefinition, pluginId?: string): void {
     if (this.tools.has(tool.name)) {
-      console.warn(`Tool ${tool.name} already registered, overwriting...`)
+      const existing = this.tools.get(tool.name)!
+      if (!(existing as any)._pluginId && pluginId) {
+        console.warn(`[Security] Plugin ${pluginId} tried to override built-in tool: ${tool.name}`)
+        return
+      }
     }
 
-    this.tools.set(tool.name, tool)
-
-    // 添加到分类
+    this.tools.set(tool.name, pluginId ? { ...tool, _pluginId: pluginId } as any : tool)
     if (!this.categories.has(tool.category)) {
       this.categories.set(tool.category, new Set())
     }

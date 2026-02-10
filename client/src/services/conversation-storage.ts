@@ -38,15 +38,18 @@ class ConversationStorage {
     const filePath = `${this.dataPath}/${STORAGE_DIR}/${id}.json`
     try {
       const raw = await window.electronAPI.fsLocal.readFile(filePath)
-      // 尝试解密（兼容旧明文数据）
-      let data = raw
-      if (!raw.trim().startsWith('{')) {
+      const parsed = JSON.parse(raw)
+
+      // 如果是加密占位符，从 secureStorage 读取真实数据
+      if (parsed.encrypted === true) {
         try {
-          const decrypted = await window.electronAPI.secure.getCredential(`conv_${id}`)
-          if (decrypted) data = decrypted
-        } catch { /* 降级为明文 */ }
+          const decrypted = await window.electronAPI.secure.getCredential(`conv_${parsed.id}`)
+          if (decrypted) return JSON.parse(decrypted)
+        } catch { /* 降级失败 */ }
+        return null
       }
-      return JSON.parse(data)
+
+      return parsed
     } catch {
       return null
     }

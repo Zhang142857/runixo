@@ -100,7 +100,7 @@ class ThinkTagParser {
 
 // ==================== 核心：流式请求 + 连续工具调用 ====================
 
-const MAX_TOOL_ROUNDS = 15
+const MAX_TOOL_ROUNDS = 8
 
 export async function streamChat(config: ClientConfig, options: StreamOptions): Promise<void> {
   const abort = new AbortController()
