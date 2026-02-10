@@ -1,676 +1,264 @@
 /**
- * AI 状态管理
- * 管理对话、工具执行历史、任务规划等状态
+ * AI 状态管理 - 重构版
+ * 集成对话持久化、Token 统计、搜索等功能
  */
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-
-// 工具调用记录
-export interface ToolCallRecord {
-  id: string
-  name: string
-  displayName: string
-  arguments: Record<string, unknown>
-  result: unknown
-  success: boolean
-  timestamp: Date
-  duration?: number
-  expanded?: boolean
-}
-
-// ReAct 步骤
-export interface ReActStep {
-  type: 'think' | 'act' | 'observe' | 'answer'
-  content: string
-  thinking?: string
-  timestamp: Date
-  toolCall?: {
-    name: string
-    arguments: Record<string, unknown>
-  }
-  toolResult?: {
-    success: boolean
-    data?: unknown
-    error?: string
-  }
-}
-
-// 任务计划
-export interface TaskPlan {
-  goal: string
-  steps: TaskStep[]
-  currentStep: number
-  status: 'planning' | 'executing' | 'completed' | 'failed'
-}
-
-// 任务步骤
-export interface TaskStep {
-  id: number
-  description: string
-  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped'
-  toolCalls?: string[]
-  result?: string
-}
-
-// 消息部分（内联渲染）
-export interface MessagePart {
-  type: 'text' | 'thinking' | 'tool-call' | 'tool-confirm'
-  content?: string
-  toolName?: string
-  args?: Record<string, unknown>
-  result?: unknown
-  status?: 'calling' | 'done' | 'error'
-  confirmId?: string
-}
-
-// 消息类型
-export interface Message {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  thinking?: string
-  parts: MessagePart[]
-  timestamp: Date
-  toolCalls?: ToolCallRecord[]
-  steps?: ReActStep[]
-  plan?: TaskPlan
-  isStreaming?: boolean
-}
-
-// 对话类型
-export interface Conversation {
-  id: string
-  title: string
-  messages: Message[]
-  agentMode: boolean
-  serverId?: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-// 可用工具
-export interface AvailableTool {
-  name: string
-  displayName: string
-  description: string
-  category: string
-  dangerous: boolean
-}
-
-// AI 配置
-export interface AISettings {
-  provider: 'ollama' | 'openai' | 'claude' | 'deepseek' | 'gemini' | 'groq' | 'mistral' | 'openrouter' | 'custom'
-  apiKey?: string
-  baseUrl?: string
-  model?: string
-  enablePlanning: boolean
-  requireConfirmation: boolean
-  maxIterations: number
-}
+import { conversationStorage } from '@/services/conversation-storage'
+import type { Conversation, Message, ConversationIndex } from '@/types/conversation'
 
 export const useAIStore = defineStore('ai', () => {
-  // 状态
-  const conversations = ref<Conversation[]>([])
+  // ==================== 状态 ====================
+  const conversations = ref<ConversationIndex[]>([])
   const currentConversationId = ref<string | null>(null)
+  const currentConversation = ref<Conversation | null>(null)
   const isProcessing = ref(false)
-  const processingStatus = ref('')
   const streamingContent = ref('')
-  const currentPlan = ref<TaskPlan | null>(null)
-  const currentSteps = ref<ReActStep[]>([])
-  const executionHistory = ref<ToolCallRecord[]>([])
-  const availableTools = ref<AvailableTool[]>([])
-  const pendingConfirmation = ref<{
-    tool: string
-    arguments: Record<string, unknown>
-    description: string
-    resolve: (confirmed: boolean) => void
-  } | null>(null)
+  const isInitialized = ref(false)
 
-  // AI 设置
-  const settings = ref<AISettings>({
-    provider: 'ollama',
-    baseUrl: 'http://localhost:11434',
-    model: 'llama3',
-    enablePlanning: true,
-    requireConfirmation: true,
-    maxIterations: 10
-  })
-
-  // 计算属性
-  const currentConversation = computed(() =>
-    conversations.value.find(c => c.id === currentConversationId.value)
+  // ==================== 计算属性 ====================
+  const messages = computed(() => currentConversation.value?.messages || [])
+  
+  const totalTokens = computed(() => 
+    currentConversation.value?.tokenUsage.total || 0
   )
 
-  const messages = computed(() =>
-    currentConversation.value?.messages || []
-  )
-
-  const agentMode = computed(() =>
-    currentConversation.value?.agentMode ?? true
-  )
-
-  const hasConversations = computed(() =>
-    conversations.value.length > 0
-  )
-
-  const recentExecutions = computed(() =>
-    executionHistory.value.slice(0, 20)
-  )
-
-  const toolsByCategory = computed(() => {
-    const grouped: Record<string, AvailableTool[]> = {}
-    for (const tool of availableTools.value) {
-      if (!grouped[tool.category]) {
-        grouped[tool.category] = []
+  // ==================== 初始化 ====================
+  async function init() {
+    if (isInitialized.value) return
+    
+    try {
+      await conversationStorage.init()
+      conversations.value = await conversationStorage.getIndex()
+      
+      // 加载最后一个对话
+      if (conversations.value.length > 0) {
+        await loadConversation(conversations.value[0].id)
       }
-      grouped[tool.category].push(tool)
+      
+      isInitialized.value = true
+    } catch (error) {
+      console.error('Failed to initialize AI store:', error)
     }
-    return grouped
-  })
-
-  // 生成唯一 ID
-  function generateId(): string {
-    return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 
-  // 创建新对话
-  function createConversation(agentMode: boolean = true, serverId?: string): string {
-    const id = generateId()
+  // ==================== 对话管理 ====================
+  async function createConversation(options?: { agentId?: string; serverId?: string }) {
+    const now = Date.now()
     const conversation: Conversation = {
-      id,
+      id: `conv_${now}`,
       title: '新对话',
+      agentId: options?.agentId,
+      serverId: options?.serverId,
       messages: [],
-      agentMode,
-      serverId,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: now,
+      updatedAt: now,
+      tokenUsage: { prompt: 0, completion: 0, total: 0 }
     }
-    conversations.value.unshift(conversation)
-    currentConversationId.value = id
-    currentPlan.value = null
-    currentSteps.value = []
-    saveToStorage()
-    return id
+
+    await conversationStorage.saveConversation(conversation)
+    conversations.value = await conversationStorage.getIndex()
+    currentConversationId.value = conversation.id
+    currentConversation.value = conversation
   }
 
-  // 切换对话
-  function switchConversation(id: string): void {
-    const conversation = conversations.value.find(c => c.id === id)
-    if (conversation) {
+  async function loadConversation(id: string) {
+    const conv = await conversationStorage.loadConversation(id)
+    if (conv) {
       currentConversationId.value = id
-      currentPlan.value = null
-      currentSteps.value = []
+      currentConversation.value = conv
     }
   }
 
-  // 删除对话
-  function deleteConversation(id: string): void {
-    const index = conversations.value.findIndex(c => c.id === id)
-    if (index !== -1) {
-      conversations.value.splice(index, 1)
-      if (currentConversationId.value === id) {
-        currentConversationId.value = conversations.value[0]?.id || null
+  async function deleteConversation(id: string) {
+    await conversationStorage.deleteConversation(id)
+    conversations.value = await conversationStorage.getIndex()
+    
+    if (currentConversationId.value === id) {
+      if (conversations.value.length > 0) {
+        await loadConversation(conversations.value[0].id)
+      } else {
+        currentConversationId.value = null
+        currentConversation.value = null
       }
-      saveToStorage()
     }
   }
 
-  // 更新对话标题
-  function updateConversationTitle(id: string, title: string): void {
-    const conversation = conversations.value.find(c => c.id === id)
-    if (conversation) {
-      conversation.title = title
-      saveToStorage()
+  async function updateConversationTitle(id: string, title: string) {
+    const conv = await conversationStorage.loadConversation(id)
+    if (conv) {
+      conv.title = title
+      conv.updatedAt = Date.now()
+      await conversationStorage.saveConversation(conv)
+      conversations.value = await conversationStorage.getIndex()
+      
+      if (currentConversationId.value === id) {
+        currentConversation.value = conv
+      }
     }
   }
 
-  // 设置 Agent 模式
-  function setAgentMode(mode: boolean): void {
-    if (currentConversation.value) {
-      currentConversation.value.agentMode = mode
-      saveToStorage()
-    }
-  }
-
-  // 设置服务器 ID
-  function setServerId(serverId: string | undefined): void {
-    if (currentConversation.value) {
-      currentConversation.value.serverId = serverId
-      saveToStorage()
-    }
-  }
-
-  // 添加用户消息
-  function addUserMessage(content: string): Message {
+  // ==================== 消息管理 ====================
+  async function addMessage(message: Omit<Message, 'id' | 'timestamp'>) {
     if (!currentConversation.value) {
-      createConversation()
+      await createConversation()
     }
 
-    const message: Message = {
-      id: generateId(),
-      role: 'user',
-      content,
-      parts: [],
-      timestamp: new Date()
+    const newMessage: Message = {
+      ...message,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now()
     }
 
-    currentConversation.value!.messages.push(message)
-    currentConversation.value!.updatedAt = new Date()
+    currentConversation.value!.messages.push(newMessage)
+    currentConversation.value!.updatedAt = Date.now()
 
-    // 自动生成标题
-    if (currentConversation.value!.messages.length === 1) {
-      const title = content.substring(0, 30) + (content.length > 30 ? '...' : '')
+    // 更新 token 统计
+    if (newMessage.tokens) {
+      currentConversation.value!.tokenUsage.prompt += newMessage.tokens.prompt
+      currentConversation.value!.tokenUsage.completion += newMessage.tokens.completion
+      currentConversation.value!.tokenUsage.total += newMessage.tokens.total
+    }
+
+    // 自动生成标题（第一条用户消息）
+    if (currentConversation.value!.messages.length === 1 && message.role === 'user') {
+      const title = message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
       currentConversation.value!.title = title
     }
 
-    saveToStorage()
-    return message
+    await conversationStorage.saveConversation(currentConversation.value!)
+    conversations.value = await conversationStorage.getIndex()
   }
 
-  // 添加助手消息
-  function addAssistantMessage(
-    content: string,
-    options?: {
-      toolCalls?: ToolCallRecord[]
-      steps?: ReActStep[]
-      plan?: TaskPlan
-    }
-  ): Message {
-    if (!currentConversation.value) return {} as Message
-
-    const message: Message = {
-      id: generateId(),
-      role: 'assistant',
-      content,
-      parts: [],
-      timestamp: new Date(),
-      toolCalls: options?.toolCalls,
-      steps: options?.steps,
-      plan: options?.plan
-    }
-
-    currentConversation.value.messages.push(message)
-    currentConversation.value.updatedAt = new Date()
-    saveToStorage()
-    return message
-  }
-
-  // 更新最后一条助手消息
-  function updateLastAssistantMessage(
-    content: string,
-    options?: {
-      toolCalls?: ToolCallRecord[]
-      steps?: ReActStep[]
-      plan?: TaskPlan
-      isStreaming?: boolean
-    }
-  ): void {
+  async function updateMessage(messageId: string, updates: Partial<Message>) {
     if (!currentConversation.value) return
 
-    const messages = currentConversation.value.messages
-    const lastMessage = messages[messages.length - 1]
-
-    if (lastMessage && lastMessage.role === 'assistant') {
-      lastMessage.content = content
-      if (options?.toolCalls) lastMessage.toolCalls = options.toolCalls
-      if (options?.steps) lastMessage.steps = options.steps
-      if (options?.plan) lastMessage.plan = options.plan
-      if (options?.isStreaming !== undefined) lastMessage.isStreaming = options.isStreaming
+    const index = currentConversation.value.messages.findIndex(m => m.id === messageId)
+    if (index >= 0) {
+      currentConversation.value.messages[index] = {
+        ...currentConversation.value.messages[index],
+        ...updates
+      }
+      currentConversation.value.updatedAt = Date.now()
+      await conversationStorage.saveConversation(currentConversation.value)
     }
   }
 
-  // 开始处理
-  function startProcessing(status: string = '处理中...'): void {
+  async function deleteMessage(messageId: string) {
+    if (!currentConversation.value) return
+
+    currentConversation.value.messages = currentConversation.value.messages.filter(
+      m => m.id !== messageId
+    )
+    currentConversation.value.updatedAt = Date.now()
+    await conversationStorage.saveConversation(currentConversation.value)
+  }
+
+  // ==================== AI 交互 ====================
+  async function sendMessage(content: string, context?: { serverId?: string; agentId?: string }) {
     isProcessing.value = true
-    processingStatus.value = status
     streamingContent.value = ''
-    currentSteps.value = []
-  }
 
-  // 更新处理状态
-  function updateProcessingStatus(status: string): void {
-    processingStatus.value = status
-  }
+    try {
+      // 添加用户消息
+      await addMessage({
+        role: 'user',
+        content
+      })
 
-  // 添加流式内容
-  function appendStreamingContent(chunk: string): void {
-    streamingContent.value += chunk
-  }
+      // 创建 AI 消息占位符
+      const aiMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      await addMessage({
+        role: 'assistant',
+        content: ''
+      })
 
-  // 结束处理
-  function endProcessing(): void {
-    isProcessing.value = false
-    processingStatus.value = ''
-    streamingContent.value = ''
-  }
-
-  // 创建流式助手消息（空消息，后续追加内容）
-  function createStreamingMessage(): Message {
-    if (!currentConversation.value) createConversation()
-    const message: Message = {
-      id: generateId(), role: 'assistant', content: '',
-      parts: [], timestamp: new Date(), isStreaming: true
-    }
-    currentConversation.value!.messages.push(message)
-    return message
-  }
-
-  // 追加流式内容到最后一条消息
-  function appendToLastMessage(delta: { type: string; content?: string; toolName?: string; args?: any; result?: any }): void {
-    console.log('[AI Store] appendToLastMessage:', JSON.stringify(delta, null, 2))
-    if (!currentConversation.value) return
-    const msgs = currentConversation.value.messages
-    const last = msgs[msgs.length - 1]
-    if (!last || last.role !== 'assistant') return
-
-    if (!last.parts) last.parts = []
-    const parts = last.parts
-    const lastPart = parts[parts.length - 1]
-
-    switch (delta.type) {
-      case 'content': {
-        console.log('[AI Store] content delta, lastPart:', lastPart?.type, 'content:', delta.content)
-        if (lastPart?.type === 'text') {
-          lastPart.content = (lastPart.content || '') + (delta.content || '')
-        } else {
-          parts.push({ type: 'text', content: delta.content || '' })
-        }
-        last.content += delta.content || ''
-        break
-      }
-      case 'thinking': {
-        if (lastPart?.type === 'thinking') {
-          lastPart.content = (lastPart.content || '') + (delta.content || '')
-        } else {
-          parts.push({ type: 'thinking', content: delta.content || '' })
-        }
-        last.thinking = (last.thinking || '') + (delta.content || '')
-        break
-      }
-      case 'tool-call': {
-        parts.push({ type: 'tool-call', toolName: delta.toolName, args: delta.args, status: 'calling' })
-        break
-      }
-      case 'tool-result': {
-        for (let i = parts.length - 1; i >= 0; i--) {
-          if (parts[i].type === 'tool-call' && parts[i].toolName === delta.toolName && parts[i].status === 'calling') {
-            parts[i].result = delta.result
-            parts[i].status = 'done'
-            break
+      // 调用 AI API（流式）
+      let fullContent = ''
+      const unsubscribe = window.electronAPI.ai.onStream((chunk: string) => {
+        fullContent += chunk
+        streamingContent.value = fullContent
+        
+        // 实时更新消息
+        if (currentConversation.value) {
+          const msgIndex = currentConversation.value.messages.findIndex(m => m.id === aiMessageId)
+          if (msgIndex >= 0) {
+            currentConversation.value.messages[msgIndex].content = fullContent
           }
         }
-        break
-      }
-      case 'tool-confirm': {
-        parts.push({ type: 'tool-confirm', toolName: delta.toolName, args: delta.args, confirmId: delta.confirmId, status: 'calling' })
-        break
-      }
-      case 'error': {
-        const errMsg = delta.content || '请求失败'
-        parts.push({ type: 'text', content: errMsg })
-        last.content += errMsg
-        break
-      }
-    }
-  }
+      })
 
-  // 结束流式消息
-  function finalizeStreamingMessage(): void {
-    if (!currentConversation.value) return
-    const msgs = currentConversation.value.messages
-    const last = msgs[msgs.length - 1]
-    if (last?.role === 'assistant') {
-      last.isStreaming = false
-      if (!last.thinking) delete last.thinking
-    }
-    saveToStorage()
-  }
-
-  // 添加 ReAct 步骤
-  function confirmTool(confirmId: string, approved: boolean): void {
-    if (!currentConversation.value) return
-    const msgs = currentConversation.value.messages
-    for (const msg of msgs) {
-      if (!msg.parts) continue
-      for (const part of msg.parts) {
-        if (part.type === 'tool-confirm' && part.confirmId === confirmId) {
-          part.status = approved ? 'done' : 'error'
-          window.electronAPI.ai.confirmTool(confirmId, approved)
-          return
-        }
-      }
-    }
-  }
-
-  function addStep(step: ReActStep): void {
-    currentSteps.value.push(step)
-  }
-
-  // 设置任务计划
-  function setPlan(plan: TaskPlan | null): void {
-    currentPlan.value = plan
-  }
-
-  // 更新任务计划
-  function updatePlan(plan: TaskPlan): void {
-    currentPlan.value = plan
-  }
-
-  // 添加工具执行记录
-  function addExecutionRecord(record: Omit<ToolCallRecord, 'id' | 'timestamp'>): void {
-    const fullRecord: ToolCallRecord = {
-      ...record,
-      id: generateId(),
-      timestamp: new Date()
-    }
-    executionHistory.value.unshift(fullRecord)
-
-    // 限制历史记录数量
-    if (executionHistory.value.length > 100) {
-      executionHistory.value = executionHistory.value.slice(0, 100)
-    }
-
-    saveExecutionHistory()
-  }
-
-  // 设置可用工具
-  function setAvailableTools(tools: AvailableTool[]): void {
-    availableTools.value = tools
-  }
-
-  // 请求确认
-  function requestConfirmation(
-    tool: string,
-    args: Record<string, unknown>,
-    description: string
-  ): Promise<boolean> {
-    return new Promise((resolve) => {
-      pendingConfirmation.value = {
-        tool,
-        arguments: args,
-        description,
-        resolve
-      }
-    })
-  }
-
-  // 确认操作
-  function confirmOperation(confirmed: boolean): void {
-    if (pendingConfirmation.value) {
-      pendingConfirmation.value.resolve(confirmed)
-      pendingConfirmation.value = null
-    }
-  }
-
-  // 更新设置
-  function updateSettings(newSettings: Partial<AISettings>): void {
-    settings.value = { ...settings.value, ...newSettings }
-    saveSettings()
-  }
-
-  // 清空当前对话
-  function clearCurrentConversation(): void {
-    if (currentConversation.value) {
-      currentConversation.value.messages = []
-      currentConversation.value.updatedAt = new Date()
-      currentPlan.value = null
-      currentSteps.value = []
-      saveToStorage()
-    }
-  }
-
-  // 保存到本地存储
-  function saveToStorage(): void {
-    try {
-      const data = conversations.value.map(c => ({
-        ...c,
-        messages: c.messages.map(m => ({
-          ...m,
-          timestamp: m.timestamp.toISOString()
-        })),
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString()
-      }))
-      localStorage.setItem('runixo_ai_conversations', JSON.stringify(data))
-    } catch (e) {
-      console.error('Failed to save conversations:', e)
-    }
-  }
-
-  // 从本地存储加载
-  function loadFromStorage(): void {
-    try {
-      const saved = localStorage.getItem('runixo_ai_conversations')
-      if (saved) {
-        const data = JSON.parse(saved)
-        conversations.value = data.map((c: Record<string, unknown>) => ({
-          ...c,
-          messages: (c.messages as Record<string, unknown>[]).map((m: Record<string, unknown>) => ({
-            ...m,
-            timestamp: new Date(m.timestamp as string),
-            parts: (m as any).parts || []
-          })),
-          createdAt: new Date(c.createdAt as string),
-          updatedAt: new Date(c.updatedAt as string)
+      await window.electronAPI.ai.chat(content, {
+        serverId: context?.serverId || currentConversation.value?.serverId,
+        conversationHistory: messages.value.slice(-10).map(m => ({
+          role: m.role,
+          content: m.content
         }))
+      })
 
-        // 自动选择最近的对话
-        if (conversations.value.length > 0 && !currentConversationId.value) {
-          currentConversationId.value = conversations.value[0].id
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load conversations:', e)
+      unsubscribe()
+
+      // 保存最终消息
+      await updateMessage(aiMessageId, { content: fullContent })
+
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      await addMessage({
+        role: 'system',
+        content: `错误: ${error instanceof Error ? error.message : '未知错误'}`
+      })
+    } finally {
+      isProcessing.value = false
+      streamingContent.value = ''
     }
   }
 
-  // 保存执行历史
-  function saveExecutionHistory(): void {
-    try {
-      const data = executionHistory.value.map(r => ({
-        ...r,
-        timestamp: r.timestamp.toISOString()
-      }))
-      localStorage.setItem('runixo_ai_execution_history', JSON.stringify(data))
-    } catch (e) {
-      console.error('Failed to save execution history:', e)
-    }
+  function stopGeneration() {
+    // TODO: 实现停止生成
+    isProcessing.value = false
   }
 
-  // 加载执行历史
-  function loadExecutionHistory(): void {
-    try {
-      const saved = localStorage.getItem('runixo_ai_execution_history')
-      if (saved) {
-        const data = JSON.parse(saved)
-        executionHistory.value = data.map((r: Record<string, unknown>) => ({
-          ...r,
-          timestamp: new Date(r.timestamp as string)
-        }))
-      }
-    } catch (e) {
-      console.error('Failed to load execution history:', e)
-    }
+  // ==================== 导出/导入 ====================
+  async function exportConversations(ids: string[]) {
+    return await conversationStorage.exportConversations(ids)
   }
 
-  // 保存设置
-  function saveSettings(): void {
-    try {
-      localStorage.setItem('runixo_ai_settings', JSON.stringify(settings.value))
-    } catch (e) {
-      console.error('Failed to save settings:', e)
-    }
+  async function importConversations(data: any) {
+    await conversationStorage.importConversations(data)
+    conversations.value = await conversationStorage.getIndex()
   }
 
-  // 加载设置
-  function loadSettings(): void {
-    try {
-      const saved = localStorage.getItem('runixo_ai_settings')
-      if (saved) {
-        settings.value = { ...settings.value, ...JSON.parse(saved) }
-      }
-    } catch (e) {
-      console.error('Failed to load settings:', e)
-    }
+  // ==================== 搜索 ====================
+  async function searchConversations(query: string) {
+    const { searchService } = await import('@/services/search-service')
+    return await searchService.search(query)
   }
 
-  // 初始化
-  function initialize(): void {
-    loadFromStorage()
-    loadExecutionHistory()
-    loadSettings()
-  }
-
+  // ==================== 返回 ====================
   return {
     // 状态
     conversations,
     currentConversationId,
-    isProcessing,
-    processingStatus,
-    streamingContent,
-    currentPlan,
-    currentSteps,
-    executionHistory,
-    availableTools,
-    pendingConfirmation,
-    settings,
-
-    // 计算属性
     currentConversation,
     messages,
-    agentMode,
-    hasConversations,
-    recentExecutions,
-    toolsByCategory,
+    isProcessing,
+    streamingContent,
+    totalTokens,
 
     // 方法
+    init,
     createConversation,
-    switchConversation,
+    loadConversation,
     deleteConversation,
     updateConversationTitle,
-    setAgentMode,
-    setServerId,
-    addUserMessage,
-    addAssistantMessage,
-    updateLastAssistantMessage,
-    startProcessing,
-    updateProcessingStatus,
-    appendStreamingContent,
-    endProcessing,
-    createStreamingMessage,
-    appendToLastMessage,
-    finalizeStreamingMessage,
-    confirmTool,
-    addStep,
-    setPlan,
-    updatePlan,
-    addExecutionRecord,
-    setAvailableTools,
-    requestConfirmation,
-    confirmOperation,
-    updateSettings,
-    clearCurrentConversation,
-    initialize
+    addMessage,
+    updateMessage,
+    deleteMessage,
+    sendMessage,
+    stopGeneration,
+    exportConversations,
+    importConversations,
+    searchConversations
   }
 })

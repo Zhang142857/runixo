@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-message" :class="message.role">
+  <div class="chat-message" :class="message.role" :data-message-id="message.id">
     <div class="message-avatar">
       <span v-if="message.role === 'user'">U</span>
       <el-icon v-else-if="message.role === 'assistant'"><ChatDotRound /></el-icon>
