@@ -130,7 +130,12 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/client-}" >> $GITHUB_OUTPUT
+        run: |
+          if [ -f VERSION ]; then
+            echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/client-v}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
