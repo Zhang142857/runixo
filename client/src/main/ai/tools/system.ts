@@ -5,6 +5,30 @@
 
 import { ToolDefinition, ToolContext, ToolResult } from './registry'
 
+/** 命令危险等级 */
+export enum CommandDangerLevel {
+  SAFE = 0,       // 无需确认
+  MODERATE = 1,   // 需要确认
+  DANGEROUS = 2,  // 二次确认
+  SUDO = 3        // 需要 sudo 密码
+}
+
+/** 评估命令危险等级 */
+export function assessCommandDanger(command: string, args: string[] = [], sudo = false): CommandDangerLevel {
+  if (sudo) return CommandDangerLevel.SUDO
+
+  const full = `${command} ${args.join(' ')}`.toLowerCase()
+  const dangerous = [/rm\s+.*-[rf].*\//, /dd\s+.*of=/, /mkfs/, /fdisk|parted/, /iptables.*-F/,
+    /shutdown|reboot|poweroff/, /kill.*-9/, /chmod.*777/, /passwd/, /userdel|groupdel/]
+  if (dangerous.some(p => p.test(full))) return CommandDangerLevel.DANGEROUS
+
+  const moderate = ['systemctl','service','docker','podman','npm','yarn','pnpm',
+    'apt','yum','dnf','git','chmod','chown','mkdir','touch','cp','mv','kill','pkill']
+  if (moderate.includes(command)) return CommandDangerLevel.MODERATE
+
+  return CommandDangerLevel.SAFE
+}
+
 /**
  * 获取系统信息工具
  */
