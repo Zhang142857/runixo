@@ -132,6 +132,7 @@ export class MCPClient extends EventEmitter {
     if (!entry) return
     this.unregisterTools(name)
     entry.process.kill()
+    setTimeout(() => { if (!entry.process.killed) entry.process.kill('SIGKILL') }, 5000)
     this.servers.delete(name)
   }
 

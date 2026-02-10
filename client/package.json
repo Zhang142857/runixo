@@ -52,7 +52,8 @@
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-web-links": "^0.9.0",
     "xterm-addon-webgl": "^0.16.0",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "dompurify": "*"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
@@ -75,7 +76,8 @@
     "vite-plugin-electron": "^0.28.4",
     "vite-plugin-electron-renderer": "^0.14.5",
     "vue-tsc": "^2.0.6",
-    "wait-on": "^7.2.0"
+    "wait-on": "^7.2.0",
+    "@types/dompurify": "*"
   },
   "build": {
     "appId": "com.runixo.client",

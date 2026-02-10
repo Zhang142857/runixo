@@ -41,6 +41,7 @@ import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, InfoFilled, DocumentCopy, Refresh, Delete, Coin } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
 import type { Message } from '../../../types/conversation'
 
@@ -69,7 +70,7 @@ const md = new MarkdownIt({
 })
 
 const renderedContent = computed(() => {
-  return md.render(props.message.content)
+  return DOMPurify.sanitize(md.render(props.message.content))
 })
 
 function formatTime(timestamp: number) {
