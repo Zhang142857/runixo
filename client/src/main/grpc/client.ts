@@ -24,7 +24,7 @@ function getProtoPath(): string {
     return join(process.resourcesPath, 'proto', 'agent.proto')
   } else {
     // 开发环境从项目根目录加载
-    return join(__dirname, '../../../../proto/agent.proto')
+    return join(__dirname, '../../../proto/agent.proto')
   }
 }
 
