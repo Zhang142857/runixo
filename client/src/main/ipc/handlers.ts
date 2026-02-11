@@ -1,4 +1,4 @@
-import { ipcMain, dialog, shell, net } from 'electron'
+import { app as electronApp, ipcMain, dialog, shell, net } from 'electron'
 import { GrpcClient } from '../grpc/client'
 import { AIGateway, AIContext } from '../ai/gateway'
 import { mcpClient } from '../ai/mcp-client'
