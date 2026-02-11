@@ -511,12 +511,27 @@ async function startSshInstall() {
       }
       
       ElMessage.success('Agent 安装成功，服务器已添加')
-      try { 
-        await serverStore.connectServer(id)
-        sshLogs.value.push({ text: '✓ 已自动连接', type: 'success' })
-        startMetrics(id)
-      } catch { 
-        sshLogs.value.push({ text: '⚠ 自动连接失败，请手动连接', type: 'error' }) 
+      const maxAttempts = 5
+      let connected = false
+      let lastError: any = null
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          await serverStore.connectServer(id)
+          sshLogs.value.push({ text: '✓ 已自动连接', type: 'success' })
+          startMetrics(id)
+          connected = true
+          break
+        } catch (e: any) {
+          lastError = e
+          if (attempt < maxAttempts) {
+            sshLogs.value.push({ text: `⏳ 等待 Agent 就绪，重试连接 (${attempt}/${maxAttempts})...`, type: 'info' })
+            await new Promise(resolve => setTimeout(resolve, 1500))
+          }
+        }
+      }
+      if (!connected) {
+        const message = lastError?.message || String(lastError || '未知错误')
+        sshLogs.value.push({ text: `⚠ 自动连接失败，请手动连接\n${message}`, type: 'error' })
       }
     } else {
       sshLogs.value.push({ text: `\n❌ 安装失败: ${result.error}`, type: 'error' })
