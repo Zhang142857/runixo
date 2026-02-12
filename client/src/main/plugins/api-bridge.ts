@@ -7,8 +7,46 @@ import { EventEmitter } from 'events'
 import { BrowserWindow, ipcMain, net } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import * as dns from 'dns/promises'
+import * as nodeNet from 'net'
 import { LoadedPlugin, PluginPermission, pluginLoader } from './loader'
 import { pluginRuntime } from './runtime'
+
+function isPrivateOrLocalIp(ip: string): boolean {
+  const normalized = ip.toLowerCase()
+  if (normalized === '::1') return true
+  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')) return true
+
+  if (normalized.startsWith('::ffff:')) {
+    return isPrivateOrLocalIp(normalized.replace('::ffff:', ''))
+  }
+
+  if (nodeNet.isIP(normalized) !== 4) return false
+  if (normalized.startsWith('127.')) return true
+  if (normalized.startsWith('10.')) return true
+  if (normalized.startsWith('192.168.')) return true
+  if (normalized.startsWith('169.254.')) return true
+
+  const parts = normalized.split('.').map(Number)
+  return parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31
+}
+
+async function isBlockedHost(hostname: string): Promise<boolean> {
+  const host = hostname.trim().toLowerCase()
+  if (!host) return true
+  if (host === 'localhost' || host === '0.0.0.0' || host === '::1') return true
+
+  if (nodeNet.isIP(host)) {
+    return isPrivateOrLocalIp(host)
+  }
+
+  try {
+    const records = await dns.lookup(host, { all: true, verbatim: true })
+    return records.some(r => isPrivateOrLocalIp(r.address))
+  } catch {
+    return false
+  }
+}
 
 // 插件 API 接口
 export interface PluginAPI {
@@ -475,11 +513,34 @@ export function setupPluginIPC(): void {
     const https = require('https')
     const tmpPath = path.join(os.tmpdir(), `runixo-plugin-${Date.now()}.shplugin`)
     try {
+      let parsed: URL
+      try {
+        parsed = new URL(url)
+      } catch {
+        throw new Error('Invalid plugin URL')
+      }
+
+      if (parsed.protocol !== 'https:') {
+        throw new Error('Only HTTPS plugin URL is allowed')
+      }
+
+      if (await isBlockedHost(parsed.hostname)) {
+        throw new Error('Access to internal network is denied')
+      }
+
       const buffer: Buffer = await new Promise((resolve, reject) => {
         https.get(url, (res: any) => {
           if (res.statusCode !== 200) return reject(new Error(`Download failed: ${res.statusCode}`))
           const chunks: Buffer[] = []
-          res.on('data', (c: Buffer) => chunks.push(c))
+          let total = 0
+          res.on('data', (c: Buffer) => {
+            total += c.length
+            if (total > 20 * 1024 * 1024) {
+              res.destroy(new Error('Plugin package too large'))
+              return
+            }
+            chunks.push(c)
+          })
           res.on('end', () => resolve(Buffer.concat(chunks)))
           res.on('error', reject)
         }).on('error', reject)

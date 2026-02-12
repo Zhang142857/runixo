@@ -11,6 +11,8 @@ import { promisify } from 'util'
 import { execSync } from 'child_process'
 import * as os from 'os'
 import * as https from 'https'
+import * as dns from 'dns/promises'
+import * as nodeNet from 'net'
 
 const gzip = promisify(zlib.gzip)
 
@@ -19,6 +21,42 @@ function sanitizeError(error: unknown): string {
   const msg = error instanceof Error ? error.message : String(error)
   // 移除文件系统路径
   return msg.replace(/\/[^\s:]+/g, '[path]').replace(/[A-Z]:\\[^\s:]+/gi, '[path]')
+}
+
+function isPrivateOrLocalIp(ip: string): boolean {
+  const normalized = ip.toLowerCase()
+  if (normalized === '::1') return true
+  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')) return true
+
+  if (normalized.startsWith('::ffff:')) {
+    return isPrivateOrLocalIp(normalized.replace('::ffff:', ''))
+  }
+
+  if (nodeNet.isIP(normalized) !== 4) return false
+  if (normalized.startsWith('127.')) return true
+  if (normalized.startsWith('10.')) return true
+  if (normalized.startsWith('192.168.')) return true
+  if (normalized.startsWith('169.254.')) return true
+
+  const parts = normalized.split('.').map(Number)
+  return parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31
+}
+
+async function isBlockedHost(hostname: string): Promise<boolean> {
+  const host = hostname.trim().toLowerCase()
+  if (!host) return true
+  if (host === 'localhost' || host === '0.0.0.0' || host === '::1') return true
+
+  if (nodeNet.isIP(host)) {
+    return isPrivateOrLocalIp(host)
+  }
+
+  try {
+    const records = await dns.lookup(host, { all: true, verbatim: true })
+    return records.some(r => isPrivateOrLocalIp(r.address))
+  } catch {
+    return false
+  }
 }
 
 // 存储所有服务器连接
@@ -1107,9 +1145,7 @@ export function setupIpcHandlers() {
         return resolve({ success: false, status: 0, statusText: '', data: null, error: 'Invalid URL' })
       }
       const hostname = url.hostname
-      const blockedPatterns = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254']
-      const blockedPrefixes = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.']
-      if (blockedPatterns.includes(hostname) || blockedPrefixes.some(p => hostname.startsWith(p)) || hostname.startsWith('[')) {
+      if (await isBlockedHost(hostname)) {
         return resolve({ success: false, status: 0, statusText: '', data: null, error: 'Access to internal networks denied' })
       }
       if (url.protocol !== 'http:' && url.protocol !== 'https:') {
