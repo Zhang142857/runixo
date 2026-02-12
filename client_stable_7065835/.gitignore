@@ -1,0 +1,85 @@
+# 依赖
+node_modules/
+vendor/
+**/package-lock.json
+
+# 包管理器缓存
+.pnpm-store/
+**/pnpm/store/
+**/AppData/
+C:*
+
+# 插件打包产物
+*.shplugin
+
+# Cloudflare
+.wrangler/
+
+# 构建产物
+dist/
+build/
+release/
+*.asar
+
+# Go 编译产物
+agent/runixo-agent
+agent/runixo-agent-*
+agent/serverhub-agent*
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# VitePress
+server/src/.vitepress/dist/
+server/src/.vitepress/cache/
+
+# 环境变量和敏感信息
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 缓存
+.cache/
+.parcel-cache/
+.eslintcache
+.nyc_output/
+coverage/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 自动生成
+auto-imports.d.ts
+components.d.ts
+
+# 工具目录
+.opencode/
+client/test-results/
+
+# 独立仓库
+server/

@@ -1,0 +1,161 @@
+# Runixo Client 自动发布工作流
+name: Release Client
+
+on:
+  push:
+    tags:
+      - 'client-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@8
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install
+
+      - name: Build
+        working-directory: client
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build:win
+          dir release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-windows
+          path: client/release/*.exe
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@8
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install
+
+      - name: Build
+        working-directory: client
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build:mac
+          ls -la release/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-macos
+          path: |
+            client/release/*.dmg
+            client/release/*.zip
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@8
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install
+
+      - name: Build
+        working-directory: client
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build:linux
+          ls -la release/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-linux
+          path: |
+            client/release/*.AppImage
+            client/release/*.deb
+
+  release:
+    name: Create Release
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List files
+        run: ls -la dist/
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -f VERSION ]; then
+            echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/client-v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Runixo Client ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Runixo Client ${{ steps.version.outputs.VERSION }}
+
+            AI-Native 服务器管理平台客户端
+
+            ### 下载
+            - Windows: Runixo Setup *.exe (安装程序) / Runixo *.exe (便携版)
+            - macOS: Runixo-*.dmg
+            - Linux: Runixo-*.AppImage / runixo-client_*.deb
+
+            ### 首次使用
+            1. 下载并安装客户端
+            2. 在服务器上安装 Agent: `curl -fsSL https://cdn.jsdelivr.net/gh/${{ github.repository }}@main/scripts/install.sh | sudo bash`
+            3. 在客户端中添加服务器
+
+          files: dist/*
+          draft: false
+          prerelease: false

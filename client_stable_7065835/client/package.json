@@ -1,0 +1,143 @@
+{
+  "name": "runixo-client",
+  "version": "0.3.0",
+  "description": "AI-Native Server Management Platform",
+  "author": {
+    "name": "Runixo Team",
+    "email": "admin@runixo.top"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zhang142857/runixo.git"
+  },
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && electron-builder",
+    "build:win": "vite build && electron-builder --win --x64",
+    "build:win32": "vite build && electron-builder --win --ia32",
+    "build:mac": "vite build && electron-builder --mac",
+    "build:linux": "vite build && electron-builder --linux",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.38",
+    "@ai-sdk/google": "^3.0.22",
+    "@ai-sdk/openai": "^3.0.26",
+    "@element-plus/icons-vue": "^2.3.2",
+    "@grpc/grpc-js": "^1.10.0",
+    "@grpc/proto-loader": "^0.7.10",
+    "@types/ssh2": "^1.15.5",
+    "@vueuse/core": "^14.2.0",
+    "ai": "^6.0.77",
+    "asn1": "^0.2.6",
+    "axios": "^1.6.7",
+    "bcrypt-pbkdf": "^1.0.2",
+    "echarts": "^5.5.0",
+    "electron-updater": "^6.1.7",
+    "element-plus": "^2.5.6",
+    "extract-zip": "^2.0.1",
+    "monaco-editor": "^0.46.0",
+    "pinia": "^2.1.7",
+    "rollup": "^4.57.1",
+    "safer-buffer": "^2.1.2",
+    "ssh2": "^1.17.0",
+    "tweetnacl": "^1.0.3",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0",
+    "xterm-addon-web-links": "^0.9.0",
+    "xterm-addon-webgl": "^0.16.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.1",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^20.11.24",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/tsconfig": "^0.5.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.3",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.22.0",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
+    "sass": "^1.71.1",
+    "typescript": "^5.3.3",
+    "unplugin-auto-import": "^0.17.5",
+    "unplugin-vue-components": "^0.26.0",
+    "vite": "^5.1.4",
+    "vite-plugin-electron": "^0.28.4",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vue-tsc": "^2.0.6",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.runixo.client",
+    "productName": "Runixo",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/ssh2/**/*",
+      "node_modules/asn1/**/*",
+      "node_modules/safer-buffer/**/*",
+      "node_modules/bcrypt-pbkdf/**/*",
+      "node_modules/tweetnacl/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "!node_modules/.pnpm",
+      "!node_modules/**/test/**",
+      "!node_modules/**/tests/**",
+      "!node_modules/**/*.md",
+      "!node_modules/**/*.ts",
+      "!node_modules/**/LICENSE*",
+      "!node_modules/**/CHANGELOG*"
+    ],
+    "extraResources": [
+      {
+        "from": "../proto",
+        "to": "proto"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Zhang142857",
+      "repo": "runixo"
+    }
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.57.1"
+  }
+}
